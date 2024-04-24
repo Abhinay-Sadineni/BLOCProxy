@@ -3,6 +3,7 @@ package globals
 import (
 	"sync"
 	"time"
+	"fmt"
 )
 
 // BackendSrv stores information for internal decision making
@@ -15,6 +16,10 @@ type BackendSrv struct {
 	WtAvgRTT float64
 	Credits  uint64
     Utilization float64
+}
+
+func foo(){
+	fmt.Println("hello world")
 }
 
 func (backend *BackendSrv) Backoff() {

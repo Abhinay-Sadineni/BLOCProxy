@@ -107,5 +107,5 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-	go backend.Update(start, uint64(chip), uint64(elapsed)) // updating server values
+	go backend.Update(start, uint64(chip), utz,  uint64(elapsed)) // updating server values
 }

@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/MSrvComm/MiCoProxy/globals"
+	"github.com/Abhinay-Sadineni/BLOCProxy/globals"
 )
 
 func LeastConn(svc string) (*globals.BackendSrv, error) {

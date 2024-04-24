@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MSrvComm/MiCoProxy/globals"
+	"github.com/Abhinay-Sadineni/BLOCProxy/globals"
 )
 
 func GetEndpoints(svc string) {

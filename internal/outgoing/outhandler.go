@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MSrvComm/MiCoProxy/globals"
-	"github.com/MSrvComm/MiCoProxy/internal/loadbalancer"
+	"github.com/Abhinay-Sadineni/BLOCProxy/globals"
+	"github.com/Abhinay-Sadineni/BLOCProxy/internal/loadbalancer"
 )
 
 func addService(s string) {

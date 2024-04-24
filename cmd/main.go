@@ -22,9 +22,10 @@ func main() {
 	fmt.Println("Output Port", globals.PROXOUTPORT)
 	fmt.Println("redirecting to:", globals.RedirectUrl_g)
 	fmt.Println("User ID:", os.Getuid())
+	fmt.Println("Below loadbalencer")
+
 
 	loadbalancer.DefaultLBPolicy_g = os.Getenv("LBPolicy")
-	fmt.Println("Below loadbalencer")
 	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" {
 		globals.NumRetries_g, _ = strconv.Atoi(os.Getenv("RETRIES"))
 		// get capacity

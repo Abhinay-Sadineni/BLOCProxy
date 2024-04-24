@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"sync/atomic"
 	"time"
-
+    "strconv"
 	"github.com/MSrvComm/MiCoProxy/internal/loadbalancer"
 )
 
@@ -119,5 +119,6 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("CHIP", chip)
+	w.Header().Set("Utilization",strconv.FormatFloat(float64((p.count()/Capacity_g)), 'f', -1, 64))
 	p.add(-1)
 }

@@ -15,7 +15,7 @@ type BackendSrv struct {
 	LastRTT  uint64
 	WtAvgRTT float64
 	Credits  uint64
-    Utilization float64
+    Server_count uint64
 }
 
 func foo(){
@@ -43,14 +43,14 @@ func (backend *BackendSrv) Decr() {
 	backend.Reqs--
 }
 
-func (backend *BackendSrv) Update(start time.Time, credits uint64,utz float64, elapsed uint64) {
+func (backend *BackendSrv) Update(start time.Time, credits uint64,utz uint64, elapsed uint64) {
 	backend.RW.Lock()
 	defer backend.RW.Unlock()
 	backend.RcvTime = start
 	backend.LastRTT = elapsed
 	backend.WtAvgRTT = backend.WtAvgRTT*0.5 + 0.5*float64(elapsed)
 	backend.Credits += credits
-	backend.Utilization = utz
+	backend.Server_count = utz
 }
 
 // Endpoints store information from the control plane

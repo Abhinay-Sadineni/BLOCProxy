@@ -119,6 +119,7 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("CHIP", chip)
-	if Capacity_g != 0	{w.Header().Set("Utilization",strconv.FormatFloat(float64((p.count()/Capacity_g)), 'f', -1, 64))}
+	log.Println("count in proxy.go: ",p.count())
+	if Capacity_g != 0	{w.Header().Set("Server_count", strconv.Itoa(int(p.count())))}
 	p.add(-1)
 }

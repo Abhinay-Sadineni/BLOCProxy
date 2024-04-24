@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
     "strconv"
-	"github.com/MSrvComm/MiCoProxy/internal/loadbalancer"
+	"github.com/Abhinay-Sadineni/BLOCProxy/internal/loadbalancer"
 )
 
 var (

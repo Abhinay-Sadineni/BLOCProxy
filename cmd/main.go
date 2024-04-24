@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/MSrvComm/MiCoProxy/controllercomm"
-	"github.com/MSrvComm/MiCoProxy/globals"
-	"github.com/MSrvComm/MiCoProxy/internal/incoming"
-	"github.com/MSrvComm/MiCoProxy/internal/loadbalancer"
-	"github.com/MSrvComm/MiCoProxy/internal/outgoing"
+	"github.com/Abhinay-Sadineni/BLOCProxy/controllercomm"
+	"github.com/Abhinay-Sadineni/BLOCProxy/globals"
+	"github.com/Abhinay-Sadineni/BLOCProxy/internal/incoming"
+	"github.com/Abhinay-Sadineni/BLOCProxy/internal/loadbalancer"
+	"github.com/Abhinay-Sadineni/BLOCProxy/internal/outgoing"
 	"github.com/gorilla/mux"
 )
 

@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/MSrvComm/MiCoProxy/globals"
+	"github.com/Abhinay-Sadineni/BLOCProxy/globals"
 )
 
 var DefaultLBPolicy_g string

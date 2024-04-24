@@ -1,4 +1,4 @@
-module github.com/MSrvComm/MiCoProxy
+module github.com/Abhinay-Sadineni/BLOCProxy
 
 go 1.17
 

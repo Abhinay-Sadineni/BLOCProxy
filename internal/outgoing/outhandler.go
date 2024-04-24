@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Abhinay-Sadineni/BLOCProxy/globals"
-	"github.com/Abhinay-Sadineni/BLOCProxy/internal/loadbalancer"
+	"local/Abhinay/globals"
+	"local/Abhinay/internal/loadbalancer"
 )
 
 func addService(s string) {

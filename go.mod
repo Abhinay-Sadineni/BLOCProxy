@@ -1,4 +1,4 @@
-module github.com/Abhinay-Sadineni/BLOCProxy
+module local/Abhinay
 
 go 1.22.2
 

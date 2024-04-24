@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/Abhinay-Sadineni/BLOCProxy/globals"
+	"local/Abhinay/globals"
 )
 
 func LeastConn(svc string) (*globals.BackendSrv, error) {

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Abhinay-Sadineni/BLOCProxy/globals"
+	"local/Abhinay/globals"
 )
 
 func GetEndpoints(svc string) {

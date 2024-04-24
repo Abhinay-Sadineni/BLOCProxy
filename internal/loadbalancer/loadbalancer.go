@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Abhinay-Sadineni/BLOCProxy/globals"
+	"local/Abhinay/globals"
 )
 
 var DefaultLBPolicy_g string

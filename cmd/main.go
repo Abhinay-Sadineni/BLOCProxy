@@ -8,15 +8,16 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Abhinay-Sadineni/BLOCProxy/controllercomm"
-	"github.com/Abhinay-Sadineni/BLOCProxy/globals"
-	"github.com/Abhinay-Sadineni/BLOCProxy/internal/incoming"
-	"github.com/Abhinay-Sadineni/BLOCProxy/internal/loadbalancer"
-	"github.com/Abhinay-Sadineni/BLOCProxy/internal/outgoing"
+	"local/Abhinay/controllercomm"
+	"local/Abhinay/globals"
+	"local/Abhinay/internal/incoming"
+	"local/Abhinay/internal/loadbalancer"
+	"local/Abhinay/internal/outgoing"
 	"github.com/gorilla/mux"
 )
 
 func main() {
+	fmt.Println("Hello world")
 	globals.RedirectUrl_g = "http://localhost" + globals.CLIENTPORT
 	fmt.Println("Input Port", globals.PROXYINPORT)
 	fmt.Println("Output Port", globals.PROXOUTPORT)

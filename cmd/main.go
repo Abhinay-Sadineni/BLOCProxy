@@ -27,7 +27,7 @@ func main() {
 
 
 	loadbalancer.DefaultLBPolicy_g = os.Getenv("LBPolicy")
-	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" {
+	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" || loadbalancer.DefaultLBPolicy_g == "Netflix"  {
 		globals.NumRetries_g, _ = strconv.Atoi(os.Getenv("RETRIES"))
 		// get capacity
 		// incoming.Capacity_g, _ = strconv.ParseFloat(os.Getenv("CAPACITY"), 64)

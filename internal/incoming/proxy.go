@@ -119,6 +119,6 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("CHIP", chip)
-	w.Header().Set("Utilization",strconv.FormatFloat(float64((p.count()/Capacity_g)), 'f', -1, 64))
+	if Capacity_g != 0	{w.Header().Set("Utilization",strconv.FormatFloat(float64((p.count()/Capacity_g)), 'f', -1, 64))}
 	p.add(-1)
 }

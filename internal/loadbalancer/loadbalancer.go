@@ -72,6 +72,8 @@ func NextEndpoint(svc string) (*globals.BackendSrv, error) {
 		return LeastConn(svc)
 	case "MLeastConn":
 		return MLeastConn(svc)
+	case "Netflix":
+		return Netflix(svc)
 	default:
 		return nil, errors.New("no endpoint found")
 	}

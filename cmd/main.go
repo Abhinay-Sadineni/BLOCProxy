@@ -24,6 +24,7 @@ func main() {
 	fmt.Println("User ID:", os.Getuid())
 
 	loadbalancer.DefaultLBPolicy_g = os.Getenv("LBPolicy")
+	fmt.Println("Below loadbalencer")
 	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" {
 		globals.NumRetries_g, _ = strconv.Atoi(os.Getenv("RETRIES"))
 		// get capacity

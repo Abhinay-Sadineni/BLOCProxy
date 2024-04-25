@@ -13,10 +13,11 @@ import (
 	"time"
     "strconv"
 	"local/Abhinay/internal/loadbalancer"
+	"local/Abhinay/globals"
 )
 
 var (
-	Capacity_g int64
+	
 	RunAvg_g   = true // average has not been set in env
 	Start_g    = time.Now()
 	timeSet_g  = false
@@ -72,7 +73,7 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	avg_g = avg_g + (float64((p.count()+1))-avg_g)/float64(count)
 	log.Println("Avg is:", avg_g) // debug
 	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" && RunAvg_g && time.Since(Start_g) > 30*time.Second {
-		Capacity_g = int64(math.Ceil(avg_g))
+		globals.Capacity_g = int64(math.Ceil(avg_g))
 		log.Println("Setting Capacity to:", avg_g) // debug
 		// reset all counters
 		log.Println("Resetting counters") // debug
@@ -82,11 +83,11 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// not checking admission if capacity not set
-	if Capacity_g != 0 {
+	if globals.Capacity_g != 0 {
 		// if there are too many requests then ask the client to retry
-		if p.count()+1 > int64(Capacity_g) {
-			// log.Println(p.activeReqs, Capacity_g, "Sending Early Hints")
-			log.Println(p.activeReqs, Capacity_g, "Rejecting Request")
+		if p.count()+1 > int64(globals.Capacity_g) {
+			// log.Println(p.activeReqs, globals.Capacity_g, "Sending Early Hints")
+			log.Println(p.activeReqs, globals.Capacity_g, "Rejecting Request")
 			w.WriteHeader(http.StatusTooManyRequests)
 			fmt.Fprint(w, "Retry")
 			return
@@ -110,16 +111,15 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	// we can send a 0 or a 1 credit back
 	// if the backend receives 0, they can't send another request for a second
 	// the probability of a credit being sent is based on how loaded the system is right now
-	// capacity_g hard codes the capacity of the system for the moment
+	// globals.capacity_g hard codes the capacity of the system for the moment
 	var chip string
-	if rand.Float64() < float64(p.count())/(0.8*float64(Capacity_g)) {
+	if rand.Float64() < float64(p.count())/(0.8*float64(globals.Capacity_g)) {
 		chip = "0"
 	} else {
 		chip = "1"
 	}
 
 	w.Header().Set("CHIP", chip)
-	log.Println("count in proxy.go: ",p.count())
-	if Capacity_g != 0	{w.Header().Set("Server_count", strconv.Itoa(int(p.count())))}
+	if globals.Capacity_g != 0	{w.Header().Set("Utilization",strconv.FormatFloat(float64((p.count()*1.0/globals.Capacity_g)), 'f', -1, 64))}
 	p.add(-1)
 }

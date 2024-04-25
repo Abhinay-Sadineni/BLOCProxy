@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"local/Abhinay/globals"
+	
 )
 
 func LeastConn(svc string) (*globals.BackendSrv, error) {
@@ -101,7 +102,7 @@ func Netflix(svc string) (*globals.BackendSrv, error) {
 
 	for {         // change the logic here to that of Netflix loadbalancer
 		ts := time.Since(backends[index1].RcvTime)
-		if ts > globals.ResetInterval_g || backends[index1].Credits > 0 {
+		if ts > globals.ResetInterval_g || float64(backends[index1].Server_count) < float64(0.95)*float64(globals.Capacity_g) {
 			break
 		}
 		index1 = rand.Intn(ln)
@@ -111,7 +112,7 @@ func Netflix(svc string) (*globals.BackendSrv, error) {
 
 	for {
 		ts := time.Since(backends[index2].RcvTime)
-		if ts > globals.ResetInterval_g || backends[index2].Credits > 0 {
+		if ts > globals.ResetInterval_g || float64(backends[index1].Server_count) < float64(0.95)*float64(globals.Capacity_g) {
 			break
 		}
 		index2 = rand.Intn(ln)
@@ -122,17 +123,23 @@ func Netflix(svc string) (*globals.BackendSrv, error) {
 
 	var backend2Return *globals.BackendSrv
 	// var ip string
-	if srv1.Reqs < srv2.Reqs {
+	if score(srv1) < score(srv2) {
 		backend2Return = srv1
 	} else {
 		backend2Return = srv2
 	}
 
-	// if credits have expired then we want to send a single probe
+	// if capacity is more than set constraint then we want to send a single probe
 	ts := time.Since(backend2Return.RcvTime)
-	if backend2Return.Credits <= 0 && ts > globals.ResetInterval_g {
+	if float64(backend2Return.Server_count) >= float64(0.95)*float64(globals.Capacity_g) && ts > globals.ResetInterval_g {
 		backend2Return.RcvTime = time.Now()
 	}
 
 	return backend2Return, nil
+}
+
+
+func score(srv *globals.BackendSrv) (float64) {
+
+   return float64(-1*(2*srv.Reqs + 1*int64(srv.Server_count)))
 }

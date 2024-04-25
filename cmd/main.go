@@ -30,17 +30,17 @@ func main() {
 	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" || loadbalancer.DefaultLBPolicy_g == "Netflix"  {
 		globals.NumRetries_g, _ = strconv.Atoi(os.Getenv("RETRIES"))
 		// get capacity
-		// incoming.Capacity_g, _ = strconv.ParseFloat(os.Getenv("CAPACITY"), 64)
-		incoming.Capacity_g, _ = strconv.ParseInt(os.Getenv("CAPACITY"), 10, 64)
+		// globals.Capacity_g, _ = strconv.ParseFloat(os.Getenv("CAPACITY"), 64)
+		globals.Capacity_g, _ = strconv.ParseInt(os.Getenv("CAPACITY"), 10, 64)
 	} else {
 		globals.NumRetries_g = 1
-		incoming.Capacity_g = 0
+		globals.Capacity_g = 0
 	}
 	reset, _ := strconv.Atoi(os.Getenv("RESET"))
 	globals.ResetInterval_g = time.Duration(reset) * time.Microsecond
 
 	// capacity has been set in the env; do not reset
-	if incoming.Capacity_g != 0 {
+	if globals.Capacity_g != 0 {
 		incoming.RunAvg_g = false
 	}
 

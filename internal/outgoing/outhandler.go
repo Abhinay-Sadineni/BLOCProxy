@@ -99,13 +99,14 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	
 	chip, err := strconv.Atoi(chipStr)
 	if err != nil {
-
+         log.Println("Before converting",chipStr)
 		 log.Printf("Error converting CHIP header to integer: %v", err)
 	
 	}
 	
 	utz, err := strconv.Atoi(utzStr)
 	if err != nil {
+		log.Println("Before Converting",utzStr)
 		log.Printf("Error converting Server count to integer: %v", err)
 	}
 	log.Printf("In outhandler, Server count: %d\n",utz)

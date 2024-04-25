@@ -32,11 +32,12 @@ func main() {
 		// get capacity
 		// globals.Capacity_g, _ = strconv.ParseFloat(os.Getenv("CAPACITY"), 64)
 		globals.Capacity_g, _ = strconv.ParseInt(os.Getenv("CAPACITY"), 10, 64)
-		
+
 	} else {
 		globals.NumRetries_g = 1
 		globals.Capacity_g = 0
 	}
+	log.Println("Global Capacity: ",globals.Capacity_g)
 	reset, _ := strconv.Atoi(os.Getenv("RESET"))
 	globals.ResetInterval_g = time.Duration(reset) * time.Microsecond
 

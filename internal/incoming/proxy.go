@@ -62,7 +62,7 @@ func (p *Proxy) count() int64 {
 }
 
 func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
-	log.Println("incoming")
+	log.Println("incoming, capacity: ",globals.Capacity_g)
 	if !timeSet_g {
 		timeSet_g = true
 		Start_g = time.Now()
@@ -120,6 +120,6 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("CHIP", chip)
-	w.Header().Set("Server",strconv.FormatFloat(float64(p.count()), 'f', -1, 64))
+	w.Header().Set("Server_count",strconv.FormatFloat(float64(p.count()), 'f', -1, 64))
 	p.add(-1)
 }

@@ -95,7 +95,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	// we always receive a new credit value from the backend
 	// it can be a 1 or a 0
 	chipStr := resp.Header.Get("CHIP")
-	utzStr := resp.Header.Get("Server")
+	utzStr := resp.Header.Get("Server_count")
 	
 	chip, err := strconv.Atoi(chipStr)
 	if err != nil {

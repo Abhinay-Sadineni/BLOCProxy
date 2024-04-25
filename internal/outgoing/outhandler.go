@@ -94,8 +94,20 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	// we always receive a new credit value from the backend
 	// it can be a 1 or a 0
-	chip, _ := strconv.Atoi(resp.Header.Get("CHIP"))
-	utz,_ := strconv.Atoi(resp.Header.Get("Server_count"))
+	chipStr := resp.Header.Get("CHIP")
+	utzStr := resp.Header.Get("Server")
+	
+	chip, err := strconv.Atoi(chipStr)
+	if err != nil {
+
+		 log.Printf("Error converting CHIP header to integer: %v", err)
+	
+	}
+	
+	utz, err := strconv.Atoi(utzStr)
+	if err != nil {
+		log.Printf("Error converting Server count to integer: %v", err)
+	}
 	log.Printf("In outhandler, Server count: %d\n",utz)
 	elapsed := time.Since(start).Nanoseconds()
 

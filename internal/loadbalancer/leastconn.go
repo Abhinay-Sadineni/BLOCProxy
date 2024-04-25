@@ -96,11 +96,11 @@ func Netflix(svc string) (*globals.BackendSrv, error) {
 	rand.Seed(seed)
 	ln := len(backends)
 
-	// we select two servers if they have a credit
+	// we select two servers if they have a 
 	// or it has been more than a second since the last response
 	index1 := rand.Intn(ln)
 
-	for {         // change the logic here to that of Netflix loadbalancer
+	for {         // filtering the servers
 		ts := time.Since(backends[index1].RcvTime)
 		if ts > globals.ResetInterval_g || float64(backends[index1].Server_count) < float64(0.95)*float64(globals.Capacity_g) {
 			break
@@ -122,7 +122,7 @@ func Netflix(svc string) (*globals.BackendSrv, error) {
 	srv2 := &backends[index2]
 
 	var backend2Return *globals.BackendSrv
-	// var ip string
+	// compare scores of these 2 randomly selected servers
 	if score(srv1) < score(srv2) {
 		backend2Return = srv1
 	} else {

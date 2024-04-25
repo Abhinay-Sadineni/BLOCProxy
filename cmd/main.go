@@ -32,6 +32,7 @@ func main() {
 		// get capacity
 		// globals.Capacity_g, _ = strconv.ParseFloat(os.Getenv("CAPACITY"), 64)
 		globals.Capacity_g, _ = strconv.ParseInt(os.Getenv("CAPACITY"), 10, 64)
+		
 	} else {
 		globals.NumRetries_g = 1
 		globals.Capacity_g = 0

@@ -1,4 +1,4 @@
-module github.com/MSrvComm/MiCoProxy
+module github.com/Ank0708/MiCoProxy
 
 go 1.17
 

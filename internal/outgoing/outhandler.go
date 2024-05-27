@@ -34,6 +34,7 @@ func addService(s string) {
 }
 
 func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
+	log.Println("Ankit... ")
 	r.URL.Scheme = "http"
 	r.RequestURI = ""
 

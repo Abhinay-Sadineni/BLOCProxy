@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"sync/atomic"
 	"time"
+	"strconv"	// Ankit
 
 	"github.com/Ank0708/MiCoProxy/internal/loadbalancer"
 )
@@ -119,6 +120,6 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("CHIP", chip)
-	w.Header().set("Server_Count", strconv.Itoa(p.count()))
+	w.Header().Set("Server_count",strconv.FormatFloat(float64(p.count()), 'f', -1, 64))	// Ankit
 	p.add(-1)
 }

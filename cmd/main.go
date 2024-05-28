@@ -17,11 +17,13 @@ import (
 )
 
 func main() {
+	fmt.Println("Hello world")	// Ankit
 	globals.RedirectUrl_g = "http://localhost" + globals.CLIENTPORT
 	fmt.Println("Input Port", globals.PROXYINPORT)
 	fmt.Println("Output Port", globals.PROXOUTPORT)
 	fmt.Println("redirecting to:", globals.RedirectUrl_g)
 	fmt.Println("User ID:", os.Getuid())
+	fmt.Println("Below loadbalencer")	// Ankit
 
 	loadbalancer.DefaultLBPolicy_g = os.Getenv("LBPolicy")
 	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" {

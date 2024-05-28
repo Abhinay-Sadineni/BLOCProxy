@@ -95,15 +95,22 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	// we always receive a new credit value from the backend
 	// it can be a 1 or a 0
-	chip, _ := strconv.Atoi(resp.Header.Get("CHIP"))
-
-	utzstr := resp.Header.Get("Server_Count")
-	server_count, err := strconv.Atoi(utzstr)
+	chipStr := resp.Header.Get("CHIP")
+	utzStr := resp.Header.Get("Server_count")
+	
+	chip, err := strconv.Atoi(chipStr)
 	if err != nil {
-		log.Println("Before converting, servercount", utzstr)
-		log.Println("Error converting server count to integer", err)
+         log.Println("Before converting",chipStr)
+		 log.Printf("Error converting CHIP header to integer: %v", err)
+	
 	}
-	log.Println("Ankit Server Count is: ", server_count)
+	
+	utz, err := strconv.Atoi(utzStr)
+	if err != nil {
+		log.Println("Before Converting",utzStr)
+		log.Printf("Error converting Server count to integer: %v", err)
+	}
+	log.Printf("In outhandler, Server count: %d\n",utz)
 	elapsed := time.Since(start).Nanoseconds()
 
 	for key, values := range resp.Header {
@@ -114,5 +121,5 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-	go backend.Update(start, uint64(chip), uint64(server_count), uint64(elapsed))
+	go backend.Update(start, uint64(chip), uint64(utz),  uint64(elapsed)) // updating server values
 }

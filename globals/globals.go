@@ -7,13 +7,14 @@ import (
 
 // BackendSrv stores information for internal decision making
 type BackendSrv struct {
-	RW       sync.RWMutex
-	Ip       string
-	Reqs     int64
-	RcvTime  time.Time
-	LastRTT  uint64
-	WtAvgRTT float64
-	Credits  uint64
+	RW           sync.RWMutex
+	Ip       	 string
+	Reqs     	 int64
+	RcvTime  	 time.Time
+	LastRTT  	 uint64
+	WtAvgRTT 	 float64
+	Credits  	 uint64
+	Server_count uint64	// Ankit
 }
 
 func (backend *BackendSrv) Backoff() {
@@ -37,13 +38,14 @@ func (backend *BackendSrv) Decr() {
 	backend.Reqs--
 }
 
-func (backend *BackendSrv) Update(start time.Time, credits uint64, elapsed uint64) {
+func (backend *BackendSrv) Update(start time.Time, credits uint64, utz uint64, elapsed uint64) {
 	backend.RW.Lock()
 	defer backend.RW.Unlock()
 	backend.RcvTime = start
 	backend.LastRTT = elapsed
 	backend.WtAvgRTT = backend.WtAvgRTT*0.5 + 0.5*float64(elapsed)
 	backend.Credits += credits
+	backend.Server_count = utz	// Ankit
 }
 
 // Endpoints store information from the control plane
@@ -95,6 +97,7 @@ func (bm *backendSrvMap) Put(svc string, backends []BackendSrv) {
 }
 
 var (
+	Capacity_g 			int64	// Ankit
 	RedirectUrl_g       string
 	Svc2BackendSrvMap_g = newBackendSrvMap() // holds all backends for services
 	Endpoints_g         = newEndpointsMap()  // all endpoints for all services

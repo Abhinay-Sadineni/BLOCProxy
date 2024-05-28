@@ -119,5 +119,6 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("CHIP", chip)
+	w.Header().set("Server_Count", strconv.Itoa(p.count()))
 	p.add(-1)
 }

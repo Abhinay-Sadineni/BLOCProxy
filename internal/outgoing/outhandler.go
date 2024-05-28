@@ -34,7 +34,7 @@ func addService(s string) {
 }
 
 func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
-	log.Println("Ankit... ")
+	log.Println("In the Outhandler/HandleOutgoing")
 	r.URL.Scheme = "http"
 	r.RequestURI = ""
 
@@ -96,6 +96,14 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	// we always receive a new credit value from the backend
 	// it can be a 1 or a 0
 	chip, _ := strconv.Atoi(resp.Header.Get("CHIP"))
+
+	utzstr := resp.Header.Get("Server_Count")
+	server_count, err := strconv.Atoi(utzstr)
+	if err != nil {
+		log.Println("Before converting, servercount", utzstr)
+		log.Println("Error converting server count to integer", err)
+	}
+	log.Println("Ankit Server Count is: ", server_count)
 	elapsed := time.Since(start).Nanoseconds()
 
 	for key, values := range resp.Header {
@@ -106,5 +114,5 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-	go backend.Update(start, uint64(chip), uint64(elapsed))
+	go backend.Update(start, uint64(chip), uint64(server_count), uint64(elapsed))
 }

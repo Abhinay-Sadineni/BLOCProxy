@@ -61,9 +61,25 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		r.URL.Host = net.JoinHostPort(backend.Ip, port) // use the ip directly
 		backend.Incr()                                  // a new request
 
-		start = time.Now()
-		resp, err = client.Do(r)
+		// Measure L4 RTT
+		startL4 := time.Now()
+		conn, err := net.DialTimeout("tcp", r.URL.Host, time.Second*10)
+		if err != nil {
+			log.Println("Error establishing TCP connection:", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+		L4RTT := time.Since(startL4)
+		conn.Close()
 
+		// Measure L7 Time
+		start := time.Now()
+		resp, err = client.Do(r)
+		L7Time := time.Since(start)
+
+		log.Println("RTT is: ", L4RTT)
+		log.Println("L7 time is: ", L7Time)
 		backend.Decr() // close the request
 
 		if err != nil {
@@ -95,22 +111,14 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	// we always receive a new credit value from the backend
 	// it can be a 1 or a 0
-	chipStr := resp.Header.Get("CHIP")
-	utzStr := resp.Header.Get("Server_count")
-	
-	chip, err := strconv.Atoi(chipStr)
-	if err != nil {
-         log.Println("Before converting",chipStr)
-		 log.Printf("Error converting CHIP header to integer: %v", err)
-	
-	}
-	
-	utz, err := strconv.Atoi(utzStr)
-	if err != nil {
-		log.Println("Before Converting",utzStr)
-		log.Printf("Error converting Server count to integer: %v", err)
-	}
-	log.Printf("In outhandler, Server count: %d\n",utz)
+
+	// Read the CHIP header
+	chip, _ := strconv.Atoi(resp.Header.Get("CHIP"))
+	log.Println("CHIP recieved for server: ", backend.Ip, " from server are: ", chip)
+	// Read the Server_count header
+	serverCount, _ := strconv.Atoi(resp.Header.Get("Server_count"))
+	log.Println("Server_count recieved for server: ", backend.Ip, " from server are: ", serverCount)
+
 	elapsed := time.Since(start).Nanoseconds()
 
 	for key, values := range resp.Header {
@@ -121,5 +129,5 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-	go backend.Update(start, uint64(chip), uint64(utz),  uint64(elapsed)) // updating server values
+	go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed)) // updating server values
 }

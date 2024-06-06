@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv" // Ankit
 	"sync/atomic"
 	"time"
-	"strconv"	// Ankit
 
 	"github.com/Ank0708/MiCoProxy/internal/loadbalancer"
 )
@@ -62,7 +62,7 @@ func (p *Proxy) count() int64 {
 }
 
 func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
-	log.Println("incoming")
+	log.Println("In the proxy.go/Handle")
 	if !timeSet_g {
 		timeSet_g = true
 		Start_g = time.Now()
@@ -81,6 +81,9 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 		count = 0
 		avg_g = 0
 	}
+
+	// Print the current count of active requests
+	log.Println("Current active request count before admission check:", p.count())
 
 	// not checking admission if capacity not set
 	if Capacity_g != 0 {
@@ -101,13 +104,18 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	log.Println("accepted")
 	w.Header().Set("X-Forwarded-For", s)
 
+	// Print the current count of active requests after incrementing
+	log.Println("Current active request count after incrementing:", p.count())
+
 	p.proxy.Transport = &pTransport{}
 	start := time.Now()
+	w.Header().Set("Server_count", strconv.Itoa(int(p.count())))
 	p.proxy.ServeHTTP(w, r)
 	elapsed := time.Since(start)
 	msg := fmt.Sprintf("timing: elapsed: %v, count: %d", elapsed, p.count())
 	log.Println(msg) // debug
 
+	/* Ankit's Modification */
 	// we can send a 0 or a 1 credit back
 	// if the backend receives 0, they can't send another request for a second
 	// the probability of a credit being sent is based on how loaded the system is right now
@@ -120,6 +128,13 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("CHIP", chip)
-	w.Header().Set("Server_count",strconv.FormatFloat(float64(p.count()), 'f', -1, 64))	// Ankit
+
+	// Print the current count of active requests before decrementing
+	log.Println("Current active request count before decrementing:", p.count())
+
 	p.add(-1)
+
+	// Print the current count of active requests after decrementing
+	log.Println("Current active request count after decrementing:", p.count())
+	/* Ankit's Modification */
 }

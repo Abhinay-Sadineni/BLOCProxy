@@ -8,13 +8,13 @@ import (
 // BackendSrv stores information for internal decision making
 type BackendSrv struct {
 	RW           sync.RWMutex
-	Ip       	 string
-	Reqs     	 int64
-	RcvTime  	 time.Time
-	LastRTT  	 uint64
-	WtAvgRTT 	 float64
-	Credits  	 uint64
-	Server_count uint64	// Ankit
+	Ip           string
+	Reqs         int64
+	RcvTime      time.Time
+	LastRTT      uint64
+	WtAvgRTT     float64
+	Credits      uint64
+	Server_count uint64 // Ankit
 }
 
 func (backend *BackendSrv) Backoff() {
@@ -45,7 +45,7 @@ func (backend *BackendSrv) Update(start time.Time, credits uint64, utz uint64, e
 	backend.LastRTT = elapsed
 	backend.WtAvgRTT = backend.WtAvgRTT*0.5 + 0.5*float64(elapsed)
 	backend.Credits += credits
-	backend.Server_count = utz	// Ankit
+	backend.Server_count = utz // Ankit
 }
 
 // Endpoints store information from the control plane
@@ -97,18 +97,19 @@ func (bm *backendSrvMap) Put(svc string, backends []BackendSrv) {
 }
 
 var (
-	Capacity_g 			int64	// Ankit
+	Capacity_g          int64 // Ankit
 	RedirectUrl_g       string
 	Svc2BackendSrvMap_g = newBackendSrvMap() // holds all backends for services
 	Endpoints_g         = newEndpointsMap()  // all endpoints for all services
 	SvcList_g           = make([]string, 0)  // knows all service names
 	NumRetries_g        int                  // how many times should a request be retried
-	ResetInterval_g time.Duration
+	ResetInterval_g     time.Duration
 )
 
 const (
-	CLIENTPORT     = ":5000"
-	PROXYINPORT    = ":62081"    // which port will the reverse proxy use for making outgoing request
-	PROXOUTPORT    = ":62082"    // which port the reverse proxy listens on
+	CLIENTPORT = ":5000"
+	// PROXYINPORT = ":62083" // Change the input port to avoid conflict with Envoy
+	PROXYINPORT = ":62081" // which port will the reverse proxy use for making outgoing request
+	PROXOUTPORT = ":62082" // which port the reverse proxy listens on
 	// RESET_INTERVAL = time.Second // interval after which credit info of backend expires
 )

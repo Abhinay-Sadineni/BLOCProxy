@@ -107,9 +107,26 @@ var (
 )
 
 const (
-	CLIENTPORT = ":5000"
-	// PROXYINPORT = ":62083" // Change the input port to avoid conflict with Envoy
+	CLIENTPORT = ":8080" // For Ankit use
+	// CLIENTPORT  = ":5000"
 	PROXYINPORT = ":62081" // which port will the reverse proxy use for making outgoing request
 	PROXOUTPORT = ":62082" // which port the reverse proxy listens on
 	// RESET_INTERVAL = time.Second // interval after which credit info of backend expires
 )
+
+func InitEndpoints() {
+	// Example service name and hard-coded IPs
+	serviceName := "localhost"
+	hardcodedIPs := []string{
+		"10.244.1.245",
+		"10.244.1.246",
+		"10.244.1.247",
+		"10.244.1.248",
+		"10.244.2.247",
+		"10.244.2.248",
+		"10.244.2.249",
+		"10.244.2.250",
+	}
+
+	Endpoints_g.Put(serviceName, hardcodedIPs)
+}

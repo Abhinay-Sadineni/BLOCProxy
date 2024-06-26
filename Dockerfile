@@ -1,3 +1,5 @@
+# --------------------------------------Version - 1 --------------------------------------
+
 # FROM golang:alpine as builder
 
 # # RUN mkdir /build
@@ -16,6 +18,7 @@
 # CMD ["./blocproxy"]
 
 
+# --------------------------------------Version - 2 --------------------------------------
 # First stage: build the Go application
 FROM golang:alpine as builder
 

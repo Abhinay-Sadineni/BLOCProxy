@@ -115,11 +115,6 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	msg := fmt.Sprintf("timing: elapsed: %v, count: %d", elapsed, p.count())
 	log.Println(msg) // debug
 
-	/* Ankit's Modification */
-	// we can send a 0 or a 1 credit back
-	// if the backend receives 0, they can't send another request for a second
-	// the probability of a credit being sent is based on how loaded the system is right now
-	// capacity_g hard codes the capacity of the system for the moment
 	var chip string
 	if rand.Float64() < float64(p.count())/(0.8*float64(Capacity_g)) {
 		chip = "0"

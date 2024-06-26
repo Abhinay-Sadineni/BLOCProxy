@@ -13,17 +13,16 @@ import (
 	"github.com/Ank0708/MiCoProxy/internal/incoming"
 	"github.com/Ank0708/MiCoProxy/internal/loadbalancer"
 	"github.com/Ank0708/MiCoProxy/internal/outgoing"
+	"github.com/Ank0708/MiCoProxy/internal/rttmonitor"
 	"github.com/gorilla/mux"
 )
 
 func main() {
-	fmt.Println("Hello world") // Ankit
 	globals.RedirectUrl_g = "http://localhost" + globals.CLIENTPORT
 	fmt.Println("Input Port", globals.PROXYINPORT)
 	fmt.Println("Output Port", globals.PROXOUTPORT)
 	fmt.Println("redirecting to:", globals.RedirectUrl_g)
 	fmt.Println("User ID:", os.Getuid())
-	fmt.Println("Below loadbalencer") // Ankit
 
 	loadbalancer.DefaultLBPolicy_g = os.Getenv("LBPolicy")
 	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" {
@@ -42,6 +41,12 @@ func main() {
 	if incoming.Capacity_g != 0 {
 		incoming.RunAvg_g = false
 	}
+
+	// Initialize endpoints
+	globals.InitEndpoints()
+
+	// Start RTT Monitoring
+	go rttmonitor.StartRTTMonitoring(2 * time.Millisecond)
 
 	// incoming request handling
 	proxy := incoming.NewProxy(globals.RedirectUrl_g)
@@ -62,4 +67,7 @@ func main() {
 		log.Fatal(http.ListenAndServe(globals.PROXYINPORT, inMux))
 	}()
 	log.Fatal(http.ListenAndServe(globals.PROXOUTPORT, outMux))
+
+	// Ensure RTT Monitoring stops gracefully
+	defer rttmonitor.StopRTTMonitoring()
 }

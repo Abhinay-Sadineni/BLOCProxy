@@ -1,11 +1,13 @@
 package rttmonitor
 
 import (
-	"bufio"
+	"bytes"
+	"fmt"
 	"log"
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,52 +15,37 @@ import (
 )
 
 var (
-	RTTMap      = make(map[string]float64)
+	rttMap      = make(map[string]float64)
 	rttMapMutex sync.RWMutex
 	stopCh      = make(chan struct{})
 	wg          sync.WaitGroup
 )
 
-func getRTT(destinationIP string) float64 {
+func getRTTs(destinationIP string) ([]string, error) {
 	cmd := exec.Command("ss", "-ti")
-	stdout, err := cmd.StdoutPipe()
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
 	if err != nil {
-		log.Println("Error creating StdoutPipe for ss command:", err)
-		return -1
+		return nil, fmt.Errorf("failed to execute ss command: %w", err)
 	}
 
-	if err := cmd.Start(); err != nil {
-		log.Println("Error starting ss command:", err)
-		return -1
-	}
+	lines := strings.Split(out.String(), "\n")
+	rttPattern := regexp.MustCompile(`rtt:([0-9.]+)`)
+	var rtts []string
 
-	scanner := bufio.NewScanner(stdout)
-	pattern := regexp.MustCompile(destinationIP + `:\S+\s+cubic.*\brtt:(\d+\.\d+)`)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		match := pattern.FindStringSubmatch(line)
-		if match != nil {
-			rtt, err := strconv.ParseFloat(match[1], 64)
-			if err != nil {
-				log.Println("Error parsing RTT:", err)
-				return -1
+	for i := 0; i < len(lines)-1; i++ {
+		if strings.Contains(lines[i], destinationIP) {
+			if i+1 < len(lines) {
+				match := rttPattern.FindStringSubmatch(lines[i+1])
+				if len(match) > 1 {
+					rtts = append(rtts, match[1])
+				}
 			}
-			return rtt
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		log.Println("Error reading ss command output:", err)
-		return -1
-	}
-
-	if err := cmd.Wait(); err != nil {
-		log.Println("Error waiting for ss command to finish:", err)
-		return -1
-	}
-
-	return -1
+	return rtts, nil
 }
 
 func monitorRTT(ip string, interval time.Duration) {
@@ -72,28 +59,54 @@ func monitorRTT(ip string, interval time.Duration) {
 			log.Println("RTT monitoring stopped for IP:", ip)
 			return
 		case <-ticker.C:
-			rtt := getRTT(ip)
-			if rtt != -1 {
-				rttMapMutex.Lock()
-				RTTMap[ip] = rtt
-				rttMapMutex.Unlock()
+			rtts, err := getRTTs(ip)
+			if err != nil {
+				log.Println("Error fetching RTT:", err)
+				continue
+			}
+
+			if len(rtts) > 0 {
+				latestRTT, err := strconv.ParseFloat(rtts[len(rtts)-1], 64)
+				if err != nil {
+					log.Println("Error parsing RTT:", err)
+					continue
+				}
+				log.Printf("Inside rttmonitor, %s : %.2f ms", ip, latestRTT)
+				updateLatestRTT(ip, latestRTT)
 			}
 		}
 	}
 }
 
-func getAllBackendIPs() []string {
-	var backendIPs []string
+func updateLatestRTT(ip string, rtt float64) {
+	backend := globals.GetBackendSrvByIP(ip)
+	if backend != nil {
+		backend.Update_latestRTT(rtt)
+		rttMapMutex.Lock()
+		rttMap[ip] = rtt
+		rttMapMutex.Unlock()
+	} else {
+		log.Println("Backend not found for IP:", ip)
+	}
+}
+
+func getActiveBackendIPs() []string {
+	activeIPs := make([]string, 0)
 	for _, svc := range globals.SvcList_g {
 		ips := globals.Endpoints_g.Get(svc)
-		backendIPs = append(backendIPs, ips...)
+		for _, ip := range ips {
+			if backend := globals.GetBackendSrvByIP(ip); backend != nil {
+				activeIPs = append(activeIPs, ip)
+			}
+		}
 	}
-	return backendIPs
+	return activeIPs
 }
 
 func StartRTTMonitoring(interval time.Duration) {
-	backendIPs := getAllBackendIPs()
+	backendIPs := getActiveBackendIPs()
 	for _, ip := range backendIPs {
+		log.Println("IPs: ", ip)
 		wg.Add(1)
 		go monitorRTT(ip, interval)
 	}
@@ -107,5 +120,5 @@ func StopRTTMonitoring() {
 func GetRTT(ip string) float64 {
 	rttMapMutex.RLock()
 	defer rttMapMutex.RUnlock()
-	return RTTMap[ip]
+	return rttMap[ip]
 }

@@ -94,9 +94,6 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Bad reply from server")
 	}
 
-	// we always receive a new credit value from the backend
-	// it can be a 1 or a 0
-
 	// Read the CHIP header
 	chip, _ := strconv.Atoi(resp.Header.Get("CHIP"))
 	log.Println("CHIP received for server: ", backend.Ip, " from server are: ", chip)
@@ -104,7 +101,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	serverCount, _ := strconv.Atoi(resp.Header.Get("Server_count"))
 	log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
 
-	// Print the RTT value
+	// Print the RTT value from latestRTT field of the backend server
 	rtt := rttmonitor.GetRTT(backend.Ip)
 	log.Printf("RTT for backend %s: %.2f ms", backend.Ip, rtt)
 
@@ -119,4 +116,16 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
 	go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed)) // updating server values
+
+	// Check if the server should be moved to inactive list based on server_count
+	if int(serverCount) > globals.LoadThreshold_g {
+		log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
+		globals.AddToInactive(svc, backend.Ip, uint64(serverCount), "load")
+	}
+
+	// Check if the server should be moved to inactive list based on RTT
+	if rtt > globals.RTTThreshold_g {
+		log.Printf("Moving backend %s to inactive list due to high RTT: %.2f ms", backend.Ip, rtt)
+		globals.AddToInactive(svc, backend.Ip, backend.Server_count, "rtt")
+	}
 }

@@ -1,10 +1,10 @@
 package globals
 
 import (
+	"log"
+	"net"
 	"sync"
 	"time"
-
-	"github.com/Ank0708/MiCoProxy/prober"
 )
 
 // BackendSrv stores information for internal decision making
@@ -189,7 +189,6 @@ func InitEndpoints() {
 
 // AddToInactive moves the IP from the global list to the inactive list for the given service
 func AddToInactive(svc, ip string, serverCount uint64, reason string) {
-	// Move IP from active to inactive
 	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
 	inactiveIPs := InactiveIPMap_g.Get(svc)
 
@@ -214,7 +213,7 @@ func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 				}()
 			} else if reason == "rtt" {
 				// Start probing the RTT for the IP
-				go prober.ProbeRTT(ip, 10*time.Millisecond, svc)
+				go probeRTT(ip, 10*time.Millisecond, svc)
 			}
 
 			return
@@ -224,7 +223,6 @@ func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 
 // RemoveFromInactive moves the IP from the inactive list to the global list for the given service
 func RemoveFromInactive(svc, ip string) {
-	// Move IP from inactive to active
 	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
 	inactiveIPs := InactiveIPMap_g.Get(svc)
 
@@ -242,4 +240,47 @@ func RemoveFromInactive(svc, ip string) {
 			return
 		}
 	}
+}
+
+// probeRTT probes the RTT for a given IP at specified intervals
+func probeRTT(ip string, interval time.Duration, svc string) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		rtt, err := measureRTT(ip)
+		if err != nil {
+			log.Println("Error fetching RTT:", err)
+			continue
+		}
+
+		if rtt < RTTThreshold_g {
+			log.Printf("RTT for inactive backend %s is now below threshold: %.2f ms", ip, rtt)
+			RemoveFromInactive(svc, ip)
+			return
+		}
+	}
+}
+
+// measureRTT measures the RTT to the given IP address
+func measureRTT(ip string) (float64, error) {
+	// Simulated RTT measurement logic
+	conn, err := net.Dial("udp", ip+":0")
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Close()
+
+	start := time.Now()
+	if _, err := conn.Write([]byte("ping")); err != nil {
+		return 0, err
+	}
+
+	buf := make([]byte, 1024)
+	if _, err := conn.Read(buf); err != nil {
+		return 0, err
+	}
+	rtt := time.Since(start).Seconds() * 1000 // RTT in milliseconds
+
+	return rtt, nil
 }

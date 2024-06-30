@@ -1,7 +1,8 @@
 package globals
 
 import (
-	"log"
+	// "fmt"
+	// "log"
 	"net"
 	"sync"
 	"time"
@@ -165,14 +166,14 @@ func InitEndpoints() {
 	// Example service name and hard-coded IPs
 	serviceName := "localhost"
 	hardcodedIPs := []string{
-		"10.244.1.245",
-		"10.244.1.246",
-		"10.244.1.247",
-		"10.244.1.248",
-		"10.244.2.247",
-		"10.244.2.248",
-		"10.244.2.249",
-		"10.244.2.250",
+		"10.244.2.16",
+		"10.244.2.17",
+		"10.244.2.18",
+		"10.244.2.19",
+		"10.244.2.20",
+		"10.244.2.21",
+		"10.244.2.22",
+		"10.244.2.23",
 	}
 
 	Endpoints_g.Put(serviceName, hardcodedIPs)
@@ -185,6 +186,22 @@ func InitEndpoints() {
 		}
 	}
 	Svc2BackendSrvMap_g.Put(serviceName, backends)
+}
+
+func GetSvc2BackendSrvMapLength() int {
+	Svc2BackendSrvMap_g.mu.Lock()
+	defer Svc2BackendSrvMap_g.mu.Unlock()
+
+	// Check for the "localhost" key and print its values and length
+	length := 0
+	if values, exists := Svc2BackendSrvMap_g.mp["localhost"]; exists {
+		// fmt.Printf("Values for 'localhost': %v\n", values)
+		length = len(values)
+	} else {
+		// fmt.Println("'localhost' key does not exist in the map.")
+	}
+
+	return length
 }
 
 // AddToInactive moves the IP from the global list to the inactive list for the given service
@@ -250,12 +267,12 @@ func probeRTT(ip string, interval time.Duration, svc string) {
 	for range ticker.C {
 		rtt, err := measureRTT(ip)
 		if err != nil {
-			log.Println("Error fetching RTT:", err)
+			// log.Println("Error fetching RTT:", err)
 			continue
 		}
 
 		if rtt < RTTThreshold_g {
-			log.Printf("RTT for inactive backend %s is now below threshold: %.2f ms", ip, rtt)
+			// log.Printf("RTT for inactive backend %s is now below threshold: %.2f ms", ip, rtt)
 			RemoveFromInactive(svc, ip)
 			return
 		}
@@ -272,15 +289,17 @@ func measureRTT(ip string) (float64, error) {
 	defer conn.Close()
 
 	start := time.Now()
-	if _, err := conn.Write([]byte("ping")); err != nil {
+	_, err = conn.Write([]byte("ping"))
+	if err != nil {
 		return 0, err
 	}
 
 	buf := make([]byte, 1024)
-	if _, err := conn.Read(buf); err != nil {
+	_, err = conn.Read(buf)
+	if err != nil {
 		return 0, err
 	}
-	rtt := time.Since(start).Seconds() * 1000 // RTT in milliseconds
 
-	return rtt, nil
+	elapsed := time.Since(start).Seconds() * 1000 // convert to milliseconds
+	return elapsed, nil
 }

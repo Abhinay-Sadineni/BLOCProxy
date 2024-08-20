@@ -18,8 +18,8 @@ func LeastConn(svc string) (*globals.BackendSrv, error) {
 	// P2C Least Conn
 	seed := time.Now().UTC().UnixNano()
 	rand.Seed(seed)
-	srv1 := &backends[rand.Intn(len(backends))]
-	srv2 := &backends[rand.Intn(len(backends))]
+	srv1 := backends[rand.Intn(len(backends))]
+	srv2 := backends[rand.Intn(len(backends))]
 
 	// var ip string
 	if srv1.Reqs < srv2.Reqs {
@@ -62,8 +62,8 @@ func MLeastConn(svc string) (*globals.BackendSrv, error) {
 		index2 = rand.Intn(ln)
 	}
 
-	srv1 := &backends[index1]
-	srv2 := &backends[index2]
+	srv1 := backends[index1]
+	srv2 := backends[index2]
 
 	var backend2Return *globals.BackendSrv
 	// var ip string
@@ -116,8 +116,8 @@ func Netflix(svc string) (*globals.BackendSrv, error) {
 		index2 = rand.Intn(ln)
 	}
 
-	srv1 := &backends[index1]
-	srv2 := &backends[index2]
+	srv1 := backends[index1]
+	srv2 := backends[index2]
 
 	var backend2Return *globals.BackendSrv
 	// compare scores of these 2 randomly selected servers

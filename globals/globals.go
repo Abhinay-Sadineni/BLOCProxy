@@ -38,7 +38,6 @@ func (backend *BackendSrv) Incr() {
 func (backend *BackendSrv) Decr() {
 	backend.RW.Lock()
 	defer backend.RW.Unlock()
-	// we use up a credit whenever a new request is sent to that backend
 	backend.Credits--
 	backend.Reqs--
 }
@@ -60,7 +59,7 @@ func (bm *backendSrvMap) UpdateMap(svc string, ips []string) {
 	backendSrvMap := bm.mp[svc]
 	ipSet := make(map[string]bool)
 	ipInUpdatedBackends := make(map[string]bool)
-	updatedBackends := []BackendSrv{}
+	updatedBackends := []*BackendSrv{}
 
 	// Create a set of IPs for quick lookup
 	for _, ip := range ips {
@@ -70,9 +69,7 @@ func (bm *backendSrvMap) UpdateMap(svc string, ips []string) {
 	// Add only those backends whose IPs are in the ipSet
 	for _, backend := range backendSrvMap {
 		if ipSet[backend.Ip] {
-			backend.RW.Lock()
 			updatedBackends = append(updatedBackends, backend)
-			backend.RW.Unlock()
 			ipInUpdatedBackends[backend.Ip] = true
 		}
 	}
@@ -80,7 +77,7 @@ func (bm *backendSrvMap) UpdateMap(svc string, ips []string) {
 	// Add new IPs that are not already in updatedBackends
 	for ip := range ipSet {
 		if !ipInUpdatedBackends[ip] {
-			updatedBackends = append(updatedBackends, BackendSrv{
+			updatedBackends = append(updatedBackends, &BackendSrv{
 				Ip:       ip,
 				Reqs:     0,
 				LastRTT:  0,
@@ -124,20 +121,20 @@ func (em *endpointsMap) Put(svc string, backends []string) {
 
 type backendSrvMap struct {
 	mu sync.Mutex
-	mp map[string][]BackendSrv
+	mp map[string][]*BackendSrv
 }
 
 func newBackendSrvMap() *backendSrvMap {
-	return &backendSrvMap{mu: sync.Mutex{}, mp: make(map[string][]BackendSrv)}
+	return &backendSrvMap{mu: sync.Mutex{}, mp: make(map[string][]*BackendSrv)}
 }
 
-func (bm *backendSrvMap) Get(svc string) []BackendSrv {
+func (bm *backendSrvMap) Get(svc string) []*BackendSrv {
 	bm.mu.Lock()
 	defer bm.mu.Unlock()
 	return bm.mp[svc]
 }
 
-func (bm *backendSrvMap) Put(svc string, backends []BackendSrv) {
+func (bm *backendSrvMap) Put(svc string, backends []*BackendSrv) {
 	bm.mu.Lock()
 	defer bm.mu.Unlock()
 	bm.mp[svc] = backends

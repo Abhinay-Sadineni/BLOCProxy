@@ -2,6 +2,8 @@ package incoming
 
 import (
 	"fmt"
+	"local/Abhinay/globals"
+	"local/Abhinay/internal/loadbalancer"
 	"log"
 	"math"
 	"math/rand"
@@ -9,20 +11,17 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 	"sync/atomic"
 	"time"
-    "strconv"
-	"local/Abhinay/internal/loadbalancer"
-	"local/Abhinay/globals"
 )
 
 var (
-	
-	RunAvg_g   = true // average has not been set in env
-	Start_g    = time.Now()
-	timeSet_g  = false
-	count      = 0
-	avg_g      = float64(0)
+	RunAvg_g  = true // average has not been set in env
+	Start_g   = time.Now()
+	timeSet_g = false
+	count     = 0
+	avg_g     = float64(0)
 )
 
 type pTransport struct{}
@@ -32,6 +31,8 @@ func (t *pTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	if err != nil {
 		log.Print("\n\ncame in error resp here: ", err)
 		return nil, err
+	} else {
+		log.Println("\n\n response came")
 	}
 
 	_, err = httputil.DumpResponse(response, true) // check if the response is valid
@@ -62,7 +63,7 @@ func (p *Proxy) count() int64 {
 }
 
 func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
-	log.Println("incoming, capacity: ",globals.Capacity_g)
+	log.Println("incoming, capacity: ", globals.Capacity_g)
 	if !timeSet_g {
 		timeSet_g = true
 		Start_g = time.Now()
@@ -108,6 +109,8 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	msg := fmt.Sprintf("timing: elapsed: %v, count: %d", elapsed, p.count())
 	log.Println(msg) // debug
 
+	w.Header().Set("Server_count", strconv.Itoa(int(p.count())))
+
 	// we can send a 0 or a 1 credit back
 	// if the backend receives 0, they can't send another request for a second
 	// the probability of a credit being sent is based on how loaded the system is right now
@@ -120,6 +123,5 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("CHIP", chip)
-	w.Header().Set("Server_count",strconv.FormatFloat(float64(p.count()), 'f', -1, 64))
 	p.add(-1)
 }

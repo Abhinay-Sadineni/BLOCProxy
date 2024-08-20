@@ -13,21 +13,21 @@ import (
 	"local/Abhinay/internal/incoming"
 	"local/Abhinay/internal/loadbalancer"
 	"local/Abhinay/internal/outgoing"
+
 	"github.com/gorilla/mux"
 )
 
 func main() {
 	fmt.Println("Hello world")
-	globals.RedirectUrl_g = "http://localhost" + globals.CLIENTPORT
+	globals.RedirectUrl_g = "http://localhost:" + os.Getenv("CLIENTPORT")
 	fmt.Println("Input Port", globals.PROXYINPORT)
 	fmt.Println("Output Port", globals.PROXOUTPORT)
 	fmt.Println("redirecting to:", globals.RedirectUrl_g)
 	fmt.Println("User ID:", os.Getuid())
 	fmt.Println("Below loadbalencer")
 
-
 	loadbalancer.DefaultLBPolicy_g = os.Getenv("LBPolicy")
-	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" || loadbalancer.DefaultLBPolicy_g == "Netflix"  {
+	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" || loadbalancer.DefaultLBPolicy_g == "Netflix" {
 		globals.NumRetries_g, _ = strconv.Atoi(os.Getenv("RETRIES"))
 		// get capacity
 		// globals.Capacity_g, _ = strconv.ParseFloat(os.Getenv("CAPACITY"), 64)
@@ -37,7 +37,7 @@ func main() {
 		globals.NumRetries_g = 1
 		globals.Capacity_g = 0
 	}
-	log.Println("Global Capacity: ",globals.Capacity_g)
+	log.Println("Global Capacity: ", globals.Capacity_g)
 	reset, _ := strconv.Atoi(os.Getenv("RESET"))
 	globals.ResetInterval_g = time.Duration(reset) * time.Microsecond
 
@@ -45,6 +45,12 @@ func main() {
 	if globals.Capacity_g != 0 {
 		incoming.RunAvg_g = false
 	}
+	
+	svc := os.Getenv("SVC")
+	if svc!="" {
+		controllercomm.GetEndpoints(svc)
+	}
+	
 
 	// incoming request handling
 	proxy := incoming.NewProxy(globals.RedirectUrl_g)

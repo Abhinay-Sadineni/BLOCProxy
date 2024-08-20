@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"local/Abhinay/globals"
-	
 )
 
 func LeastConn(svc string) (*globals.BackendSrv, error) {
@@ -83,7 +82,6 @@ func MLeastConn(svc string) (*globals.BackendSrv, error) {
 	return backend2Return, nil
 }
 
-
 func Netflix(svc string) (*globals.BackendSrv, error) {
 	log.Println("Netflix algorithm used") // debug
 	backends, err := GetBackendSvcList(svc)
@@ -96,11 +94,11 @@ func Netflix(svc string) (*globals.BackendSrv, error) {
 	rand.Seed(seed)
 	ln := len(backends)
 
-	// we select two servers if they have a 
+	// we select two servers if they have a
 	// or it has been more than a second since the last response
 	index1 := rand.Intn(ln)
 
-	for {         // filtering the servers
+	for { // filtering the servers
 		ts := time.Since(backends[index1].RcvTime)
 		if ts > globals.ResetInterval_g || float64(backends[index1].Server_count) < float64(0.95)*float64(globals.Capacity_g) {
 			break
@@ -138,8 +136,7 @@ func Netflix(svc string) (*globals.BackendSrv, error) {
 	return backend2Return, nil
 }
 
+func score(srv *globals.BackendSrv) float64 {
 
-func score(srv *globals.BackendSrv) (float64) {
-
-   return float64(-1*(2*srv.Reqs + 1*int64(srv.Server_count)))
+	return float64(-1 * (2*srv.Reqs + 1*int64(srv.Server_count)))
 }

@@ -11,6 +11,7 @@ import (
 )
 
 func GetEndpoints(svc string) {
+	// log.Println("Service name: ", svc)
 	req, err := http.NewRequest("GET", "http://epwatcher:62000/"+svc, nil)
 	if err != nil {
 		log.Println("Error reading request:", err)
@@ -36,10 +37,12 @@ func GetEndpoints(svc string) {
 	var ep globals.Endpoints
 	err = json.Unmarshal(body, &ep)
 	if err != nil {
+
 		log.Println("error json unmarshalling:", err.Error())
 		return
 	}
 	globals.Endpoints_g.Put(svc, ep.Ips)
+	globals.Svc2BackendSrvMap_g.UpdateMap(svc, ep.Ips)
 }
 
 func getAllEndpoints() {
@@ -51,11 +54,12 @@ func getAllEndpoints() {
 }
 
 func RunComm(done chan bool) {
-	ticker := time.NewTicker(time.Microsecond * 10)
+	ticker := time.NewTicker(time.Millisecond * 10)
 	for {
 		select {
 		case <-ticker.C:
 			getAllEndpoints()
+
 		case <-done:
 			return
 		}

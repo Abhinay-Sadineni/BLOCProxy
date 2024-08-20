@@ -1,24 +1,24 @@
 package globals
 
 import (
+	"fmt"
 	"sync"
 	"time"
-	"fmt"
 )
 
 // BackendSrv stores information for internal decision making
 type BackendSrv struct {
-	RW       sync.RWMutex
-	Ip       string
-	Reqs     int64
-	RcvTime  time.Time
-	LastRTT  uint64
-	WtAvgRTT float64
-	Credits  uint64
-    Server_count uint64
+	RW           sync.RWMutex
+	Ip           string
+	Reqs         int64
+	RcvTime      time.Time
+	LastRTT      uint64
+	WtAvgRTT     float64
+	Credits      uint64
+	Server_count uint64
 }
 
-func foo(){
+func foo() {
 	fmt.Println("hello world")
 }
 
@@ -43,7 +43,7 @@ func (backend *BackendSrv) Decr() {
 	backend.Reqs--
 }
 
-func (backend *BackendSrv) Update(start time.Time, credits uint64,utz uint64, elapsed uint64) {
+func (backend *BackendSrv) Update(start time.Time, credits uint64, utz uint64, elapsed uint64) {
 	backend.RW.Lock()
 	defer backend.RW.Unlock()
 	backend.RcvTime = start
@@ -51,6 +51,48 @@ func (backend *BackendSrv) Update(start time.Time, credits uint64,utz uint64, el
 	backend.WtAvgRTT = backend.WtAvgRTT*0.5 + 0.5*float64(elapsed)
 	backend.Credits += credits
 	backend.Server_count = utz
+}
+
+func (bm *backendSrvMap) UpdateMap(svc string, ips []string) {
+	bm.mu.Lock()
+	defer bm.mu.Unlock()
+
+	backendSrvMap := bm.mp[svc]
+	ipSet := make(map[string]bool)
+	ipInUpdatedBackends := make(map[string]bool)
+	updatedBackends := []BackendSrv{}
+
+	// Create a set of IPs for quick lookup
+	for _, ip := range ips {
+		ipSet[ip] = true
+	}
+
+	// Add only those backends whose IPs are in the ipSet
+	for _, backend := range backendSrvMap {
+		if ipSet[backend.Ip] {
+			backend.RW.Lock()
+			updatedBackends = append(updatedBackends, backend)
+			backend.RW.Unlock()
+			ipInUpdatedBackends[backend.Ip] = true
+		}
+	}
+
+	// Add new IPs that are not already in updatedBackends
+	for ip := range ipSet {
+		if !ipInUpdatedBackends[ip] {
+			updatedBackends = append(updatedBackends, BackendSrv{
+				Ip:       ip,
+				Reqs:     0,
+				LastRTT:  0,
+				WtAvgRTT: 0,
+				Credits:  1, // credit for all backends is set to 1 at the start
+				RcvTime:  time.Now(),
+			})
+		}
+	}
+
+	// Update the backend map with the new list
+	bm.mp[svc] = updatedBackends
 }
 
 // Endpoints store information from the control plane
@@ -102,18 +144,18 @@ func (bm *backendSrvMap) Put(svc string, backends []BackendSrv) {
 }
 
 var (
-	Capacity_g int64
+	Capacity_g          int64
 	RedirectUrl_g       string
 	Svc2BackendSrvMap_g = newBackendSrvMap() // holds all backends for services
 	Endpoints_g         = newEndpointsMap()  // all endpoints for all services
 	SvcList_g           = make([]string, 0)  // knows all service names
 	NumRetries_g        int                  // how many times should a request be retried
-	ResetInterval_g time.Duration
+	ResetInterval_g     time.Duration
 )
 
 const (
-	CLIENTPORT     = ":5000"
-	PROXYINPORT    = ":62081"    // which port will the reverse proxy use for making outgoing request
-	PROXOUTPORT    = ":62082"    // which port the reverse proxy listens on
+	CLIENTPORT  = ":5000"
+	PROXYINPORT = ":62081" // which port will the reverse proxy use for making outgoing request
+	PROXOUTPORT = ":62082" // which port the reverse proxy listens on
 	// RESET_INTERVAL = time.Second // interval after which credit info of backend expires
 )

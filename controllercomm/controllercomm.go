@@ -42,7 +42,7 @@ func GetEndpoints(svc string) {
 		return
 	}
 	globals.Endpoints_g.Put(svc, ep.Ips)
-	globals.Svc2BackendSrvMap_g.UpdateMap(svc, ep.Ips)
+	//globals.Svc2BackendSrvMap_g.UpdateMap(svc, ep.Ips)
 }
 
 func getAllEndpoints() {

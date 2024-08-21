@@ -142,14 +142,37 @@ func (bm *backendSrvMap) Put(svc string, backends []BackendSrv) {
 	bm.mp[svc] = backends
 }
 
+type inactiveIPMap struct {
+	mu sync.Mutex
+	mp map[string][]string
+}
+
+func newInactiveIPMap() *inactiveIPMap {
+	return &inactiveIPMap{mu: sync.Mutex{}, mp: make(map[string][]string)}
+}
+
+func (im *inactiveIPMap) Get(svc string) []string {
+	im.mu.Lock()
+	defer im.mu.Unlock()
+	return im.mp[svc]
+}
+
+func (im *inactiveIPMap) Put(svc string, ips []string) {
+	im.mu.Lock()
+	defer im.mu.Unlock()
+	im.mp[svc] = ips
+}
+
 var (
 	Capacity_g          int64
 	RedirectUrl_g       string
 	Svc2BackendSrvMap_g = newBackendSrvMap() // holds all backends for services
 	Endpoints_g         = newEndpointsMap()  // all endpoints for all services
+	InactiveIPMap_g     = newInactiveIPMap() // holds inactive IPs for services
 	SvcList_g           = make([]string, 0)  // knows all service names
 	NumRetries_g        int                  // how many times should a request be retried
 	ResetInterval_g     time.Duration
+	LoadThreshold_g     = 2 // Load threshold for server count
 )
 
 const (
@@ -158,3 +181,54 @@ const (
 	PROXOUTPORT = ":62082" // which port the reverse proxy listens on
 	// RESET_INTERVAL = time.Second // interval after which credit info of backend expires
 )
+
+func AddToInactive(svc, ip string, serverCount uint64, reason string) {
+	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
+	inactiveIPs := InactiveIPMap_g.Get(svc)
+
+	for i, backend := range backendSrvMap {
+		if backend.Ip == ip {
+			// Remove from active
+			Svc2BackendSrvMap_g.mu.Lock()
+			Svc2BackendSrvMap_g.mp[svc] = append(backendSrvMap[:i], backendSrvMap[i+1:]...)
+			Svc2BackendSrvMap_g.mu.Unlock()
+
+			// Add to inactive with reason
+			InactiveIPMap_g.mu.Lock()
+			InactiveIPMap_g.mp[svc] = append(inactiveIPs, ip)
+			InactiveIPMap_g.mu.Unlock()
+
+			if reason == "load" {
+				// Start timer for IP to be moved back to active list
+				delay := time.Duration((serverCount-uint64(LoadThreshold_g))*50) * time.Millisecond
+				go func() {
+					time.Sleep(delay)
+					RemoveFromInactive(svc, ip)
+				}()
+			}
+
+			return
+		}
+	}
+}
+
+// RemoveFromInactive moves the IP from the inactive list to the global list for the given service
+func RemoveFromInactive(svc, ip string) {
+	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
+	inactiveIPs := InactiveIPMap_g.Get(svc)
+
+	for i, inactiveIP := range inactiveIPs {
+		if inactiveIP == ip {
+			// Remove from inactive
+			InactiveIPMap_g.mu.Lock()
+			InactiveIPMap_g.mp[svc] = append(inactiveIPs[:i], inactiveIPs[i+1:]...)
+			InactiveIPMap_g.mu.Unlock()
+
+			// Add to active
+			Svc2BackendSrvMap_g.mu.Lock()
+			Svc2BackendSrvMap_g.mp[svc] = append(backendSrvMap, BackendSrv{Ip: ip})
+			Svc2BackendSrvMap_g.mu.Unlock()
+			return
+		}
+	}
+}

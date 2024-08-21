@@ -114,4 +114,9 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(resp.StatusCode) // Set the response status code once
 	io.Copy(w, resp.Body)
 	go backend.Update(start, uint64(chip), uint64(utz), uint64(elapsed))
+
+	if int(utz) > globals.LoadThreshold_g {
+		// log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
+		globals.AddToInactive(svc, backend.Ip, uint64(utz), "load")
+	}
 }

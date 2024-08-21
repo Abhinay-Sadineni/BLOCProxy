@@ -173,10 +173,11 @@ var (
 	NumRetries_g        int                  // how many times should a request be retried
 	ResetInterval_g     time.Duration
 	LoadThreshold_g     = 2 // Load threshold for server count
+
 )
 
 const (
-	CLIENTPORT  = ":5000"
+	CLIENTPORT  = ":8080"
 	PROXYINPORT = ":62081" // which port will the reverse proxy use for making outgoing request
 	PROXOUTPORT = ":62082" // which port the reverse proxy listens on
 	// RESET_INTERVAL = time.Second // interval after which credit info of backend expires

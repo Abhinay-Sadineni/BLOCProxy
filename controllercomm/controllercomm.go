@@ -3,11 +3,10 @@ package controllercomm
 import (
 	"encoding/json"
 	"io/ioutil"
+	"local/Abhinay/globals"
 	"log"
 	"net/http"
 	"time"
-
-	"local/Abhinay/globals"
 )
 
 func GetEndpoints(svc string) {

@@ -104,11 +104,6 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 
 	p.proxy.Transport = &pTransport{}
 	start := time.Now()
-	p.proxy.ServeHTTP(w, r)
-	elapsed := time.Since(start)
-	msg := fmt.Sprintf("timing: elapsed: %v, count: %d", elapsed, p.count())
-	log.Println(msg) // debug
-
 	w.Header().Set("Server_count", strconv.Itoa(int(p.count())))
 
 	// we can send a 0 or a 1 credit back
@@ -123,5 +118,11 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("CHIP", chip)
+
+	p.proxy.ServeHTTP(w, r)
+	elapsed := time.Since(start)
+	msg := fmt.Sprintf("timing: elapsed: %v, count: %d", elapsed, p.count())
+	log.Println(msg) // debug
+
 	p.add(-1)
 }

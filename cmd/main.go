@@ -49,6 +49,7 @@ func main() {
 	svc := os.Getenv("SVC")
 	if svc!="" {
 		controllercomm.GetEndpoints(svc)
+		log.Println(globals.Endpoints_g.Get(svc))
 	}
 	
 

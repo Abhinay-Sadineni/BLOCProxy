@@ -70,9 +70,7 @@ func (bm *backendSrvMap) UpdateMap(svc string, ips []string) {
 	// Add only those backends whose IPs are in the ipSet
 	for _, backend := range backendSrvMap {
 		if ipSet[backend.Ip] {
-			backend.RW.Lock()
 			updatedBackends = append(updatedBackends, backend)
-			backend.RW.Unlock()
 			ipInUpdatedBackends[backend.Ip] = true
 		}
 	}
@@ -81,12 +79,13 @@ func (bm *backendSrvMap) UpdateMap(svc string, ips []string) {
 	for ip := range ipSet {
 		if !ipInUpdatedBackends[ip] {
 			updatedBackends = append(updatedBackends, BackendSrv{
-				Ip:       ip,
-				Reqs:     0,
-				LastRTT:  0,
-				WtAvgRTT: 0,
-				Credits:  1, // credit for all backends is set to 1 at the start
-				RcvTime:  time.Now(),
+				Ip:           ip,
+				Reqs:         0,
+				LastRTT:      0,
+				WtAvgRTT:     0,
+				Credits:      1, // credit for all backends is set to 1 at the start
+				RcvTime:      time.Now(),
+				Server_count: 0,
 			})
 		}
 	}

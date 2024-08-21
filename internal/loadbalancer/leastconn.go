@@ -132,7 +132,7 @@ func Netflix(svc string) (*globals.BackendSrv, error) {
 	if float64(backend2Return.Server_count) >= float64(0.95)*float64(globals.Capacity_g) && ts > globals.ResetInterval_g {
 		backend2Return.RcvTime = time.Now()
 	}
-
+    log.Println("backend selected")
 	return backend2Return, nil
 }
 

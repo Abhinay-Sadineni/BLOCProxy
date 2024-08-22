@@ -15,22 +15,6 @@ import (
 	"github.com/Ank0708/MiCoProxy/internal/rttmonitor"
 )
 
-// Example function to print RTT map
-func PrintRTTMap() {
-	rttMap := rttmonitor.GetAllRTTs()
-	for ip, rtt := range rttMap {
-		fmt.Printf("IP: %s, RTT: %.2f ms\n", ip, rtt)
-	}
-}
-
-// Example function to print RTT map
-func PrintRTTMap() {
-	rttMap := rttmonitor.GetAllRTTs()
-	for ip, rtt := range rttMap {
-		fmt.Printf("IP: %s, RTT: %.2f ms\n", ip, rtt)
-	}
-}
-
 func addService(s string) {
 	if strings.Contains(s, "epwatcher") {
 		return

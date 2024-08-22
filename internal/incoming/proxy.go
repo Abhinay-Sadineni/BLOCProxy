@@ -16,6 +16,7 @@ import (
 	"github.com/Ank0708/MiCoProxy/internal/loadbalancer"
 )
 
+// var x = 0
 var (
 	Capacity_g int64
 	RunAvg_g   = true // average has not been set in env
@@ -48,9 +49,16 @@ type Proxy struct {
 	activeReqs int64
 }
 
+// func NewProxy(target string) *Proxy {
+// 	url, _ := url.Parse(target)
+// 	return &Proxy{target: url, proxy: httputil.NewSingleHostReverseProxy(url), activeReqs: 0}
+// }
+
 func NewProxy(target string) *Proxy {
 	url, _ := url.Parse(target)
-	return &Proxy{target: url, proxy: httputil.NewSingleHostReverseProxy(url), activeReqs: 0}
+	p := &Proxy{target: url, proxy: httputil.NewSingleHostReverseProxy(url), activeReqs: 0}
+	// go p.startTimer() // Start the timer when the proxy is created
+	return p
 }
 
 func (p *Proxy) add(n int64) {
@@ -60,6 +68,22 @@ func (p *Proxy) add(n int64) {
 func (p *Proxy) count() int64 {
 	return atomic.LoadInt64(&p.activeReqs)
 }
+
+// func (p *Proxy) startTimer() {
+// 	ticker := time.NewTicker(1 * time.Second)
+// 	defer ticker.Stop()
+
+// 	// var prevCount int64
+
+// 	for range ticker.C {
+// 		// currentCount := p.count()
+// 		// diff := currentCount - prevCount
+// 		// log.Printf("RPS:  %d\n", diff)
+// 		// prevCount = currentCount
+// 		log.Println("RPS: ", x)
+// 		x = 0
+// 	}
+// }
 
 func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	// log.Println("In the proxy.go/Handle")
@@ -106,18 +130,15 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 
 	// Print the current count of active requests after incrementing
 	// log.Println("Current active request count after incrementing:", p.count())
+	// log.Println("Current active request count after incrementing:", p.count())
 
 	p.proxy.Transport = &pTransport{}
-
-	start := time.Now()
-
+	// start := time.Now()
 	w.Header().Set("Server_count", strconv.Itoa(int(p.count())))
-
-	elapsed := time.Since(start).Nanoseconds()
-	msg := fmt.Sprintf("server_count time: %d", elapsed)
-	log.Println(msg) // debug
-
 	p.proxy.ServeHTTP(w, r)
+	// elapsed := time.Since(start)
+	// msg := fmt.Sprintf("timing: elapsed: %v, count: %d", elapsed, p.count())
+	// log.Println(msg) // debug
 
 	var chip string
 	if rand.Float64() < float64(p.count())/(0.8*float64(Capacity_g)) {

@@ -23,6 +23,14 @@ func PrintRTTMap() {
 	}
 }
 
+// Example function to print RTT map
+func PrintRTTMap() {
+	rttMap := rttmonitor.GetAllRTTs()
+	for ip, rtt := range rttMap {
+		fmt.Printf("IP: %s, RTT: %.2f ms\n", ip, rtt)
+	}
+}
+
 func addService(s string) {
 	if strings.Contains(s, "epwatcher") {
 		return
@@ -104,6 +112,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	// Read the CHIP header
 	chip, _ := strconv.Atoi(resp.Header.Get("CHIP"))
+	// log.Println("CHIP received for server: ", backend.Ip, " from server are: ", chip)
 	// log.Println("CHIP received for server: ", backend.Ip, " from server are: ", chip)
 	// Read the Server_count header
 

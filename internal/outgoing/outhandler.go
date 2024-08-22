@@ -15,6 +15,14 @@ import (
 	"github.com/Ank0708/MiCoProxy/internal/rttmonitor"
 )
 
+// Example function to print RTT map
+func PrintRTTMap() {
+	rttMap := rttmonitor.GetAllRTTs()
+	for ip, rtt := range rttMap {
+		fmt.Printf("IP: %s, RTT: %.2f ms\n", ip, rtt)
+	}
+}
+
 func addService(s string) {
 	if strings.Contains(s, "epwatcher") {
 		return
@@ -46,12 +54,12 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	client := &http.Client{Timeout: time.Second * 20}
 
 	for i := 0; i < globals.NumRetries_g; i++ {
-		log.Println("Svc is: ", svc)
+		// log.Println("Svc is: ", svc)
 		backend, err = loadbalancer.NextEndpoint(svc)
 		if err != nil {
 			log.Println("Error fetching backend:", err)
 			w.WriteHeader(http.StatusBadGateway)
-			log.Println("err: StatusConflict:", err)
+			// log.Println("err: StatusConflict:", err)
 			fmt.Fprint(w, err.Error())
 			return
 		}
@@ -62,9 +70,9 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		// Measure L7 Time
 		start := time.Now()
 		resp, err = client.Do(r)
-		L7Time := time.Since(start)
+		// L7Time := time.Since(start)
 
-		log.Println("L7 time is: ", L7Time)
+		// log.Println("L7 time is: ", L7Time)
 		backend.Decr() // close the request
 
 		if err != nil {
@@ -96,16 +104,26 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	// Read the CHIP header
 	chip, _ := strconv.Atoi(resp.Header.Get("CHIP"))
-	log.Println("CHIP received for server: ", backend.Ip, " from server are: ", chip)
+	// log.Println("CHIP received for server: ", backend.Ip, " from server are: ", chip)
 	// Read the Server_count header
-	serverCount, _ := strconv.Atoi(resp.Header.Get("Server_count"))
-	log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
 
-	// Print the RTT value from latestRTT field of the backend server
-	rtt := rttmonitor.GetRTT(backend.Ip)
-	log.Printf("RTT for backend %s: %.2f ms", backend.Ip, rtt)
+	start = time.Now()
+
+	serverCount, _ := strconv.Atoi(resp.Header.Get("Server_count"))
 
 	elapsed := time.Since(start).Nanoseconds()
+	msg := fmt.Sprintf("client_count time: %d", elapsed)
+	log.Println(msg) // debug
+	// log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
+
+	// Print the RTT value from latestRTT field of the backend server
+	// PrintRTTMap()
+	// length := globals.GetSvc2BackendSrvMapLength()
+	// log.Println("The length of Active List: ", length)
+	rtt := rttmonitor.GetRTT(backend.Ip)
+	// log.Printf("RTT for backend %s: %.2f ms", backend.Ip, rtt)
+
+	// elapsed = time.Since(start).Nanoseconds()
 
 	for key, values := range resp.Header {
 		for _, value := range values {
@@ -119,13 +137,13 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the server should be moved to inactive list based on server_count
 	if int(serverCount) > globals.LoadThreshold_g {
-		log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
+		// log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
 		globals.AddToInactive(svc, backend.Ip, uint64(serverCount), "load")
 	}
 
 	// Check if the server should be moved to inactive list based on RTT
 	if rtt > globals.RTTThreshold_g {
-		log.Printf("Moving backend %s to inactive list due to high RTT: %.2f ms", backend.Ip, rtt)
+		// log.Printf("Moving backend %s to inactive list due to high RTT: %.2f ms", backend.Ip, rtt)
 		globals.AddToInactive(svc, backend.Ip, backend.Server_count, "rtt")
 	}
 }

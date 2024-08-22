@@ -13,9 +13,9 @@ import (
 func GetEndpoints(svc string) {
 	// log.Println("SVC is: ", svc)
 	req, err := http.NewRequest("GET", "http://epwatcher:62000/"+svc, nil)
-	if err != nil {
-		log.Println("Error reading request:", err)
-	}
+	// if err != nil {
+	// 	log.Println("Error reading request:", err)
+	// }
 
 	req.Header.Set("Cache-Control", "no-cache")
 
@@ -23,14 +23,14 @@ func GetEndpoints(svc string) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("error getting response:", err.Error())
+		// log.Println("error getting response:", err.Error())
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("error reading response:", err.Error())
+		// log.Println("error reading response:", err.Error())
 		return
 	}
 

@@ -24,10 +24,6 @@ func main() {
 	fmt.Println("redirecting to:", globals.RedirectUrl_g)
 	fmt.Println("User ID:", os.Getuid())
 
-	// Start RTT monitoring with a 2-millisecond interval
-	go rttmonitor.StartRTTMonitoring(2 * time.Millisecond)
-	log.Println("Started RTT monitoring")
-
 	loadbalancer.DefaultLBPolicy_g = os.Getenv("LBPolicy")
 	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" {
 		globals.NumRetries_g, _ = strconv.Atoi(os.Getenv("RETRIES"))
@@ -49,6 +45,10 @@ func main() {
 	// Initialize endpoints
 	globals.InitEndpoints()
 
+	// Start RTT monitoring with a 2-millisecond interval
+	go rttmonitor.StartRTTMonitoring(2 * time.Millisecond)
+	log.Println("Started RTT monitoring")
+
 	// incoming request handling
 	proxy := incoming.NewProxy(globals.RedirectUrl_g)
 	inMux := mux.NewRouter()
@@ -56,7 +56,6 @@ func main() {
 
 	// outgoing request handling
 	outMux := mux.NewRouter()
-	log.Println("Ankit")
 	outMux.PathPrefix("/").HandlerFunc(outgoing.HandleOutgoing)
 
 	// start running the communication server
@@ -69,7 +68,4 @@ func main() {
 		log.Fatal(http.ListenAndServe(globals.PROXYINPORT, inMux))
 	}()
 	log.Fatal(http.ListenAndServe(globals.PROXOUTPORT, outMux))
-
-	// Ensure RTT Monitoring stops gracefully
-	// defer rttmonitor.StopRTTMonitoring()
 }

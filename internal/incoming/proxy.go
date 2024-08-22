@@ -62,7 +62,7 @@ func (p *Proxy) count() int64 {
 }
 
 func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
-	log.Println("In the proxy.go/Handle")
+	// log.Println("In the proxy.go/Handle")
 	if !timeSet_g {
 		timeSet_g = true
 		Start_g = time.Now()
@@ -71,7 +71,7 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	// avg_g = alpha_g*avg_g + (1-alpha_g)*float64(p.count())
 	count++
 	avg_g = avg_g + (float64((p.count()+1))-avg_g)/float64(count)
-	log.Println("Avg is:", avg_g) // debug
+	// log.Println("Avg is:", avg_g) // debug
 	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" && RunAvg_g && time.Since(Start_g) > 30*time.Second {
 		Capacity_g = int64(math.Ceil(avg_g))
 		log.Println("Setting Capacity to:", avg_g) // debug
@@ -83,7 +83,7 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Print the current count of active requests
-	log.Println("Current active request count before admission check:", p.count())
+	// log.Println("Current active request count before admission check:", p.count())
 
 	// not checking admission if capacity not set
 	if Capacity_g != 0 {
@@ -101,19 +101,23 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	p.add(1)
-	log.Println("accepted")
+	// log.Println("accepted")
 	w.Header().Set("X-Forwarded-For", s)
 
 	// Print the current count of active requests after incrementing
-	log.Println("Current active request count after incrementing:", p.count())
+	// log.Println("Current active request count after incrementing:", p.count())
 
 	p.proxy.Transport = &pTransport{}
+
 	start := time.Now()
+
 	w.Header().Set("Server_count", strconv.Itoa(int(p.count())))
-	p.proxy.ServeHTTP(w, r)
-	elapsed := time.Since(start)
-	msg := fmt.Sprintf("timing: elapsed: %v, count: %d", elapsed, p.count())
+
+	elapsed := time.Since(start).Nanoseconds()
+	msg := fmt.Sprintf("server_count time: %d", elapsed)
 	log.Println(msg) // debug
+
+	p.proxy.ServeHTTP(w, r)
 
 	var chip string
 	if rand.Float64() < float64(p.count())/(0.8*float64(Capacity_g)) {
@@ -125,11 +129,11 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("CHIP", chip)
 
 	// Print the current count of active requests before decrementing
-	log.Println("Current active request count before decrementing:", p.count())
+	// log.Println("Current active request count before decrementing:", p.count())
 
 	p.add(-1)
 
 	// Print the current count of active requests after decrementing
-	log.Println("Current active request count after decrementing:", p.count())
+	// log.Println("Current active request count after decrementing:", p.count())
 	/* Ankit's Modification */
 }

@@ -4,6 +4,7 @@ import (
 	// "fmt"
 	// "log"
 
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -254,6 +255,8 @@ func RemoveFromInactive(svc, ip string) {
 			Svc2BackendSrvMap_g.mu.Lock()
 			Svc2BackendSrvMap_g.mp[svc] = append(backendSrvMap, BackendSrv{Ip: ip})
 			Svc2BackendSrvMap_g.mu.Unlock()
+
+			log.Println("removed from inactive: ", ip)
 			return
 		}
 	}

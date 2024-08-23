@@ -43,7 +43,12 @@ func main() {
 	}
 
 	// Initialize endpoints
-	globals.InitEndpoints()
+	//globals.InitEndpoints()
+	svc := os.Getenv("SVC")
+	if svc != "" {
+		controllercomm.GetEndpoints(svc)
+		log.Println(globals.Endpoints_g.Get(svc))
+	}
 
 	// Start RTT monitoring with a 2-millisecond interval
 	go rttmonitor.StartRTTMonitoring(2 * time.Millisecond)

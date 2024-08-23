@@ -133,12 +133,12 @@ func (p *Proxy) Handle(w http.ResponseWriter, r *http.Request) {
 	// log.Println("Current active request count after incrementing:", p.count())
 
 	p.proxy.Transport = &pTransport{}
-	// start := time.Now()
+	start := time.Now()
 	w.Header().Set("Server_count", strconv.Itoa(int(p.count())))
 	p.proxy.ServeHTTP(w, r)
-	// elapsed := time.Since(start)
-	// msg := fmt.Sprintf("timing: elapsed: %v, count: %d", elapsed, p.count())
-	// log.Println(msg) // debug
+	elapsed := time.Since(start)
+	msg := fmt.Sprintf("timing: elapsed: %v, count: %d", elapsed, p.count())
+	log.Println(msg) // debug
 
 	var chip string
 	if rand.Float64() < float64(p.count())/(0.8*float64(Capacity_g)) {

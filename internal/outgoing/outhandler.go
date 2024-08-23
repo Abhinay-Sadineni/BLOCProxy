@@ -55,7 +55,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, err.Error())
 			return
 		}
-		custom_port := "62081"
+		custom_port := "8080"
 		r.URL.Host = net.JoinHostPort(backend.Ip, custom_port) // use the ip directly
 		backend.Incr()                                         // a new request
 
@@ -107,14 +107,14 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	elapsed := time.Since(start).Nanoseconds()
 	msg := fmt.Sprintf("client_count time: %d", elapsed)
 	log.Println(msg) // debug
-	// log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
+	log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
 
 	// Print the RTT value from latestRTT field of the backend server
 	// PrintRTTMap()
 	// length := globals.GetSvc2BackendSrvMapLength()
 	// log.Println("The length of Active List: ", length)
 	rtt := rttmonitor.GetRTT(backend.Ip)
-	// log.Printf("RTT for backend %s: %.2f ms", backend.Ip, rtt)
+	log.Printf("RTT for backend %s: %.2f ms", backend.Ip, rtt)
 
 	// elapsed = time.Since(start).Nanoseconds()
 
@@ -130,7 +130,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the server should be moved to inactive list based on server_count
 	if int(serverCount) > globals.LoadThreshold_g {
-		// log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
+		log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
 		globals.AddToInactive(svc, backend.Ip, uint64(serverCount), "load")
 	}
 

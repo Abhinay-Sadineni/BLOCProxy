@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	log.Println("Port: ", port)
 	if err == nil {
 		addService(svc)
+		svc = os.Getenv("SVC")
 	}
 	var start time.Time
 	var resp *http.Response

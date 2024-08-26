@@ -67,7 +67,7 @@ func main() {
 	// start running the communication server
 	done := make(chan bool)
 	defer close(done)
-	go controllercomm.RunComm(done)
+	// go controllercomm.RunComm(done)
 
 	// start the proxy services
 	go func() {

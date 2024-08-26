@@ -164,31 +164,19 @@ const (
 	// RESET_INTERVAL = time.Second // interval after which credit info of backend expires
 )
 
-func InitEndpoints() {
+func InitEndpoints(svc string) {
 	// Example service name and hard-coded IPs
-	serviceName := "localhost"
-	hardcodedIPs := []string{
-		// "10.244.2.201",
-		// "10.244.2.202",
-		// "10.244.2.203",
-		// "10.244.2.204",
-		// "10.244.2.205",
-		// "10.244.2.206",
-		// "10.244.2.207",
-		// "10.244.2.208",
-		"10.244.2.217",
-	}
 
-	Endpoints_g.Put(serviceName, hardcodedIPs)
+	IPS:= Endpoints_g.Get(svc)
 
 	// Initialize BackendSrv instances for each IP and put them into Svc2BackendSrvMap_g
-	backends := make([]BackendSrv, len(hardcodedIPs))
-	for i, ip := range hardcodedIPs {
+	backends := make([]BackendSrv, len(IPS))
+	for i, ip := range IPS {
 		backends[i] = BackendSrv{
 			Ip: ip,
 		}
 	}
-	Svc2BackendSrvMap_g.Put(serviceName, backends)
+	Svc2BackendSrvMap_g.Put(svc, backends)
 }
 
 func GetSvc2BackendSrvMapLength() int {

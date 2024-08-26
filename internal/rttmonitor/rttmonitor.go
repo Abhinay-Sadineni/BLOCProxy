@@ -31,7 +31,6 @@ func getRTTs(destinationIP string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute ss command: %w", err)
 	}
-	log.Println(out)
 	lines := strings.Split(out.String(), "\n")
 	rttPattern := regexp.MustCompile(`rtt:([0-9.]+)`)
 	var rtts []string
@@ -42,7 +41,7 @@ func getRTTs(destinationIP string) ([]string, error) {
 				match := rttPattern.FindStringSubmatch(lines[i+1])
 				if len(match) > 1 {
 					rtts = append(rtts, match[1])
-					// log.Printf("Parsed RTT for IP %s: %s ms", destinationIP, match[1])
+					//log.Printf("Parsed RTT for IP %s: %s ms", destinationIP, match[1])
 				}
 			}
 		}
@@ -96,7 +95,7 @@ func updateLatestRTT(ip string, rtt float64) {
 func getActiveBackendIPs() []string {
 	activeIPs := make([]string, 0)
 	ips := globals.Endpoints_g.Get(os.Getenv("SVC"))
-	log.Println("Inside ips: ",ips)
+	log.Println("Inside ips: ", ips)
 	for _, ip := range ips {
 		if backend := globals.GetBackendSrvByIP(ip); backend != nil {
 			activeIPs = append(activeIPs, ip)

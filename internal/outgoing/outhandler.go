@@ -55,7 +55,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, err.Error())
 			return
 		}
-		custom_port := "8080"
+		custom_port := "62081"
 		r.URL.Host = net.JoinHostPort(backend.Ip, custom_port) // use the ip directly
 		backend.Incr()                                         // a new request
 
@@ -105,8 +105,8 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	serverCount, _ := strconv.Atoi(resp.Header.Get("Server_count"))
 
 	elapsed := time.Since(start).Nanoseconds()
-	msg := fmt.Sprintf("client_count time: %d", elapsed)
-	log.Println(msg) // debug
+	//msg := fmt.Sprintf("client_count time: %d", elapsed)
+	//log.Println(msg) // debug
 	log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
 
 	// Print the RTT value from latestRTT field of the backend server
@@ -136,7 +136,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the server should be moved to inactive list based on RTT
 	if rtt > globals.RTTThreshold_g {
-		// log.Printf("Moving backend %s to inactive list due to high RTT: %.2f ms", backend.Ip, rtt)
+		log.Printf("Moving backend %s to inactive list due to high RTT: %.2f ms", backend.Ip, rtt)
 		globals.AddToInactive(svc, backend.Ip, backend.Server_count, "rtt")
 	}
 }

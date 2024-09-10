@@ -202,7 +202,6 @@ func AddToInactive(svc, ip string, serverCount uint64, reason string) {
         log.Println(backend.Ip," ",ip) 
 		if backend.Ip == ip {
 			// Remove from active
-			log.Println("IP found")
 
 			Svc2BackendSrvMap_g.mu.Lock()
 			Svc2BackendSrvMap_g.mp[svc] = append(backendSrvMap[:i], backendSrvMap[i+1:]...)
@@ -260,7 +259,6 @@ func probeRTT(ip string, interval time.Duration, svc string) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		log.Println("Inside ticker")
 		rtt, err := measureRTT(ip)
 		log.Printf("Inside probeRTT: %.2f ms",rtt)
 		if err != nil {
@@ -303,15 +301,19 @@ func probeRTT(ip string, interval time.Duration, svc string) {
 
 // measureRTT measures the RTT to the given IP address using ICMP
 func measureRTT(ip string) (float64, error) {
+	log.Println("Inside measureRTT")
 	conn, err := net.Dial("tcp", ip+":8080")
 	if err != nil {
+		log.Println("1 ", err)
 		return 0, err
 	}
 	defer conn.Close()
 
 	start := time.Now()
+	log.Println("start time: ",start)
 	_, err = conn.Write([]byte("ping"))
 	if err != nil {
+		log.Println("2 ", err)
 		return 0, err
 	}
 
@@ -320,7 +322,9 @@ func measureRTT(ip string) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
+	log.Println("completed")
 
 	elapsed := time.Since(start).Seconds() * 1000 // convert to milliseconds
+	log.Println("Inside measureRTT",elapsed)
 	return elapsed, nil
 }

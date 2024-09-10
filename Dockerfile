@@ -83,7 +83,7 @@ COPY --from=builder /app/blocproxy /app/blocproxy
 COPY --from=builder /app /app
 
 # Install iproute2 in the final stage to get ss command
-RUN apk add --no-cache iproute2
+RUN apk add --no-cache iproute2 iputils
 
 # Expose the necessary port
 EXPOSE 62081

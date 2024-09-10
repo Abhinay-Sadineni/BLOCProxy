@@ -13,7 +13,7 @@ import (
 	"github.com/Ank0708/MiCoProxy/internal/incoming"
 	"github.com/Ank0708/MiCoProxy/internal/loadbalancer"
 	"github.com/Ank0708/MiCoProxy/internal/outgoing"
-	"github.com/Ank0708/MiCoProxy/internal/rttmonitor"
+	//"github.com/Ank0708/MiCoProxy/internal/rttmonitor"
 	"github.com/gorilla/mux"
 )
 
@@ -44,16 +44,13 @@ func main() {
 
 	// Initialize endpoints
 	//globals.InitEndpoints()
-	svc := os.Getenv("SVC")
-	if svc != "" {
-		controllercomm.GetEndpoints(svc)
-		log.Println(globals.Endpoints_g.Get(svc))
-		globals.InitEndpoints(svc)
-	}
+	//svc := os.Getenv("SVC")
+	controllercomm.GetEndpoints("yolov5")
+	globals.InitEndpoints("yolov5")
 
 	// Start RTT monitoring with a 2-millisecond interval
-	go rttmonitor.StartRTTMonitoring(2 * time.Millisecond)
-	log.Println("Started RTT monitoring")
+	//go rttmonitor.StartRTTMonitoring(2 * time.Millisecond)
+	//log.Println("Started RTT monitoring")
 
 	// incoming request handling
 	proxy := incoming.NewProxy(globals.RedirectUrl_g)

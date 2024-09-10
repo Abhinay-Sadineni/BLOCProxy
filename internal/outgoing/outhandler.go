@@ -6,14 +6,13 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Ank0708/MiCoProxy/globals"
 	"github.com/Ank0708/MiCoProxy/internal/loadbalancer"
-	"github.com/Ank0708/MiCoProxy/internal/rttmonitor"
+	//"github.com/Ank0708/MiCoProxy/internal/rttmonitor"
 )
 
 func addService(s string) {
@@ -39,7 +38,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	log.Println("Port: ", port)
 	if err == nil {
 		addService(svc)
-		svc = os.Getenv("SVC")
+		svc = "yolov5"
 	}
 	var start time.Time
 	var resp *http.Response
@@ -115,8 +114,8 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	// PrintRTTMap()
 	// length := globals.GetSvc2BackendSrvMapLength()
 	// log.Println("The length of Active List: ", length)
-	rtt := rttmonitor.GetRTT(backend.Ip)
-	log.Printf("RTT for backend %s: %.2f ms", backend.Ip, rtt)
+	//rtt := rttmonitor.GetRTT(backend.Ip)
+	//log.Printf("RTT for backend %s: %.2f ms", backend.Ip, rtt)
 
 	// elapsed = time.Since(start).Nanoseconds()
 
@@ -137,8 +136,8 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the server should be moved to inactive list based on RTT
-	if rtt > globals.RTTThreshold_g {
-		log.Printf("Moving backend %s to inactive list due to high RTT: %.2f ms", backend.Ip, rtt)
-		globals.AddToInactive(svc, backend.Ip, backend.Server_count, "rtt")
-	}
+	//if rtt > globals.RTTThreshold_g {
+	//	log.Printf("Moving backend %s to inactive list due to high RTT: %.2f ms", backend.Ip, rtt)
+	//	globals.AddToInactive(svc, backend.Ip, backend.Server_count, "rtt")
+	//}
 }

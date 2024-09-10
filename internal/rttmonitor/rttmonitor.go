@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"os"
 
 	// "log"
 	"os/exec"
@@ -94,7 +93,7 @@ func updateLatestRTT(ip string, rtt float64) {
 
 func getActiveBackendIPs() []string {
 	activeIPs := make([]string, 0)
-	ips := globals.Endpoints_g.Get(os.Getenv("SVC"))
+	ips := globals.Endpoints_g.Get("yolov5")
 	log.Println("Inside ips: ", ips)
 	for _, ip := range ips {
 		if backend := globals.GetBackendSrvByIP(ip); backend != nil {

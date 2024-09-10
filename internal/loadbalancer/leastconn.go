@@ -9,7 +9,7 @@ import (
 )
 
 func LeastConn(svc string) (*globals.BackendSrv, error) {
-	log.Println("Least Connection used") // debug
+	//log.Println("Least Connection used") // debug
 	backends, err := GetBackendSvcList(svc)
 	if err != nil {
 		return nil, err

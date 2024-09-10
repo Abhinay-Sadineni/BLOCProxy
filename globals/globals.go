@@ -167,7 +167,7 @@ const (
 func InitEndpoints(svc string) {
 	// Example service name and hard-coded IPs
 
-	IPS:= Endpoints_g.Get(svc)
+	IPS := Endpoints_g.Get(svc)
 
 	// Initialize BackendSrv instances for each IP and put them into Svc2BackendSrvMap_g
 	backends := make([]BackendSrv, len(IPS))
@@ -199,8 +199,11 @@ func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 	inactiveIPs := InactiveIPMap_g.Get(svc)
 
 	for i, backend := range backendSrvMap {
+        log.Println(backend.Ip," ",ip) 
 		if backend.Ip == ip {
 			// Remove from active
+			log.Println("IP found")
+
 			Svc2BackendSrvMap_g.mu.Lock()
 			Svc2BackendSrvMap_g.mp[svc] = append(backendSrvMap[:i], backendSrvMap[i+1:]...)
 			Svc2BackendSrvMap_g.mu.Unlock()
@@ -219,6 +222,7 @@ func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 				}()
 			} else if reason == "rtt" {
 				// Start probing the RTT for the IP
+				log.Println("Start probing")
 				go probeRTT(ip, 10*time.Millisecond, svc)
 			}
 
@@ -256,14 +260,16 @@ func probeRTT(ip string, interval time.Duration, svc string) {
 	defer ticker.Stop()
 
 	for range ticker.C {
+		log.Println("Inside ticker")
 		rtt, err := measureRTT(ip)
+		log.Printf("Inside probeRTT: %.2f ms",rtt)
 		if err != nil {
-			// log.Println("Error fetching RTT:", err)
+			log.Println("Error fetching RTT:", err)
 			continue
 		}
 
 		if rtt < RTTThreshold_g {
-			// log.Printf("RTT for inactive backend %s is now below threshold: %.2f ms", ip, rtt)
+			log.Printf("RTT for inactive backend %s is now below threshold: %.2f ms", ip, rtt)
 			RemoveFromInactive(svc, ip)
 			return
 		}

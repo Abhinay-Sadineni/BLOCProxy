@@ -7,8 +7,8 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/Ank0708/MiCoProxy/controllercomm"
+	"strings"
+	//"github.com/Ank0708/MiCoProxy/controllercomm"
 	"github.com/Ank0708/MiCoProxy/globals"
 	"github.com/Ank0708/MiCoProxy/internal/incoming"
 	"github.com/Ank0708/MiCoProxy/internal/loadbalancer"
@@ -46,8 +46,26 @@ func main() {
 	//globals.InitEndpoints()
 	svc := os.Getenv("SVC")
 	if svc != "" {
-		controllercomm.GetEndpoints(svc)
-		log.Println(globals.Endpoints_g.Get(svc))
+		podIPsEnv := os.Getenv("POD_IPS")
+	
+		// Check if POD_IPS is not empty
+		if podIPsEnv == "" {
+			log.Println("POD_IPS environment variable is empty or not set")
+			return
+		}
+	
+		// Split the pod IPs into a slice (assuming they are comma-separated)
+		podIPs := strings.Split(podIPsEnv, ",")
+	
+		// Log the fetched IPs (for debugging)
+		log.Println("Fetched POD_IPS: ", podIPs)
+	
+		// Populate the globals.Endpoints struct
+		var ep globals.Endpoints
+		ep.Ips = podIPs
+	
+		// Store the result in the global Endpoints_g map
+		globals.Endpoints_g.Put(svc, ep.Ips)
 		globals.InitEndpoints(svc)
 	}
 
@@ -65,9 +83,9 @@ func main() {
 	outMux.PathPrefix("/").HandlerFunc(outgoing.HandleOutgoing)
 
 	// start running the communication server
-	done := make(chan bool)
-	defer close(done)
-	go controllercomm.RunComm(done)
+	//done := make(chan bool)
+	//defer close(done)
+	//go controllercomm.RunComm(done)
 
 	// start the proxy services
 	go func() {

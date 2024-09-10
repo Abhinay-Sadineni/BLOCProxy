@@ -30,14 +30,14 @@ func addService(s string) {
 }
 
 func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
-	log.Println("In the Outhandler/HandleOutgoing")
+	//log.Println("In the Outhandler/HandleOutgoing")
 	r.URL.Scheme = "http"
 	r.RequestURI = ""
 
 	svc, port, err := net.SplitHostPort(r.Host)
 	log.Println("Port: ", port)
 	if err == nil {
-		addService(svc)
+		//addService("yolov5")
 	}
 	var start time.Time
 	var resp *http.Response
@@ -47,7 +47,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	for i := 0; i < globals.NumRetries_g; i++ {
 		// log.Println("Svc is: ", svc)
-		backend, err = loadbalancer.NextEndpoint(svc)
+		backend, err = loadbalancer.NextEndpoint("yolov5")
 		if err != nil {
 			log.Println("Error fetching backend:", err)
 			w.WriteHeader(http.StatusBadGateway)
@@ -107,13 +107,14 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	elapsed := time.Since(start).Nanoseconds()
 	//msg := fmt.Sprintf("client_count time: %d", elapsed)
 	//log.Println(msg) // debug
-	log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
+	//log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
 
 	// Print the RTT value from latestRTT field of the backend server
 	// PrintRTTMap()
 	// length := globals.GetSvc2BackendSrvMapLength()
 	// log.Println("The length of Active List: ", length)
 	rtt := rttmonitor.GetRTT(backend.Ip)
+	log.SetFlags(log.Ltime | log.Lmicroseconds)
 	log.Printf("RTT for backend %s: %.2f ms", backend.Ip, rtt)
 
 	// elapsed = time.Since(start).Nanoseconds()
@@ -129,6 +130,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed)) // updating server values
 
 	// Check if the server should be moved to inactive list based on server_count
+	svc = "yolov5"
 	if int(serverCount) > globals.LoadThreshold_g {
 		log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
 		globals.AddToInactive(svc, backend.Ip, uint64(serverCount), "load")
@@ -136,6 +138,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the server should be moved to inactive list based on RTT
 	if rtt > globals.RTTThreshold_g {
+		log.SetFlags(log.Ltime | log.Lmicroseconds)
 		log.Printf("Moving backend %s to inactive list due to high RTT: %.2f ms", backend.Ip, rtt)
 		globals.AddToInactive(svc, backend.Ip, backend.Server_count, "rtt")
 	}

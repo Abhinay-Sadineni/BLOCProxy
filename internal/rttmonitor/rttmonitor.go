@@ -73,7 +73,7 @@ func monitorRTT(ip string, interval time.Duration) {
 					// log.Println("Error parsing RTT:", err)
 					continue
 				}
-				// log.Printf("Inside rttmonitor, %s : %.2f ms", ip, latestRTT)
+				//log.Printf("Inside rttmonitor, %s : %.2f ms", ip, latestRTT)
 				updateLatestRTT(ip, latestRTT)
 			}
 		}

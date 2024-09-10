@@ -13,9 +13,9 @@ import (
 func GetEndpoints(svc string) {
 	// log.Println("SVC is: ", svc)
 	req, err := http.NewRequest("GET", "http://epwatcher:62000/"+svc, nil)
-	// if err != nil {
-	// 	log.Println("Error reading request:", err)
-	// }
+	if err != nil {
+		log.Println("Error reading request:", err)
+	}
 
 	req.Header.Set("Cache-Control", "no-cache")
 

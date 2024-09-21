@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 	"strings"
+	//"os/exec"
 	//"github.com/Ank0708/MiCoProxy/controllercomm"
 	"github.com/Ank0708/MiCoProxy/globals"
 	"github.com/Ank0708/MiCoProxy/internal/incoming"
@@ -23,6 +24,17 @@ func main() {
 	fmt.Println("Output Port", globals.PROXOUTPORT)
 	fmt.Println("redirecting to:", globals.RedirectUrl_g)
 	fmt.Println("User ID:", os.Getuid())
+
+    // cmd := exec.Command("sudo", "hping3", "-S", "-c", "1", "-p", "8080", "10.244.2.242")
+
+    // // Run the command and capture output
+    // output, err := cmd.CombinedOutput()
+    // if err != nil {
+    //     fmt.Printf("Error: %v\n", err)
+    //     fmt.Printf("Stderr: %s\n", string(output)) // Print stderr for more details
+    // } else {
+    //     fmt.Printf("Output: %s\n", output)
+    // }
 
 	loadbalancer.DefaultLBPolicy_g = os.Getenv("LBPolicy")
 	if loadbalancer.DefaultLBPolicy_g == "MLeastConn" {
@@ -67,6 +79,7 @@ func main() {
 		// Store the result in the global Endpoints_g map
 		globals.Endpoints_g.Put(svc, ep.Ips)
 		globals.InitEndpoints(svc)
+		globals.ActiveMap_g.Init(podIPs)
 	}
 
 	// Start RTT monitoring with a 2-millisecond interval

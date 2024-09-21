@@ -12,7 +12,7 @@ import (
 
 	"github.com/Ank0708/MiCoProxy/globals"
 	"github.com/Ank0708/MiCoProxy/internal/loadbalancer"
-	"github.com/Ank0708/MiCoProxy/internal/rttmonitor"
+	//"github.com/Ank0708/MiCoProxy/internal/rttmonitor"
 )
 
 func addService(s string) {
@@ -34,14 +34,15 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	r.URL.Scheme = "http"
 	r.RequestURI = ""
 
-	svc, port, err := net.SplitHostPort(r.Host)
-	log.Println("Port: ", port)
+	svc, _ , err := net.SplitHostPort(r.Host)
+	//log.Println("Port: ", port)
 	if err == nil {
 		//addService("yolov5")
 	}
 	var start time.Time
 	var resp *http.Response
 	var backend *globals.BackendSrv
+	var ip string
 
 	client := &http.Client{Timeout: time.Second * 20}
 
@@ -56,6 +57,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		custom_port := "62081"
+		ip = backend.Ip
 		r.URL.Host = net.JoinHostPort(backend.Ip, custom_port) // use the ip directly
 		backend.Incr()                                         // a new request
 
@@ -65,7 +67,9 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		// L7Time := time.Since(start)
 
 		// log.Println("L7 time is: ", L7Time)
-		backend.Decr() // close the request
+		if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){
+			backend.Decr() 
+		}// close the request
 
 		if err != nil {
 			elapsed := time.Since(start) // how long the rejection took
@@ -113,9 +117,9 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	// PrintRTTMap()
 	// length := globals.GetSvc2BackendSrvMapLength()
 	// log.Println("The length of Active List: ", length)
-	rtt := rttmonitor.GetRTT(backend.Ip)
+	//rtt := rttmonitor.GetRTT(backend.Ip)
 	log.SetFlags(log.Ltime | log.Lmicroseconds)
-	log.Printf("RTT for backend %s: %.2f ms", backend.Ip, rtt)
+	//log.Printf("RTT for backend %s: %.2f ms", backend.Ip, rtt)
 
 	// elapsed = time.Since(start).Nanoseconds()
 
@@ -127,7 +131,9 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-	go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed)) // updating server values
+	if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){
+		go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed)) 
+	}
 
 	// Check if the server should be moved to inactive list based on server_count
 	svc = "yolov5"
@@ -137,9 +143,9 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the server should be moved to inactive list based on RTT
-	if rtt > globals.RTTThreshold_g {
-		log.SetFlags(log.Ltime | log.Lmicroseconds)
-		log.Printf("Moving backend %s to inactive list due to high RTT: %.2f ms", backend.Ip, rtt)
-		globals.AddToInactive(svc, backend.Ip, backend.Server_count, "rtt")
-	}
+	// if rtt > globals.RTTThreshold_g {
+	// 	log.SetFlags(log.Ltime | log.Lmicroseconds)
+	// 	log.Printf("Moving backend %s to inactive list due to high RTT: %.2f ms", backend.Ip, rtt)
+	// 	globals.AddToInactive(svc, backend.Ip, backend.Server_count, "rtt")
+	// }
 }

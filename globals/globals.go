@@ -5,9 +5,14 @@ import (
 	// "log"
 
 	"log"
-	"net"
+	//"net"
+	"fmt"
+	"os/exec"
+	"regexp"
+	"strconv"
 	"sync"
 	"time"
+
 )
 
 // BackendSrv stores information for internal decision making
@@ -123,33 +128,78 @@ func (bm *backendSrvMap) Put(svc string, backends []BackendSrv) {
 	bm.mp[svc] = backends
 }
 
-type inactiveIPMap struct {
+// type inactiveIPMap struct {
+// 	mu sync.Mutex
+// 	mp map[string][]string
+// }
+
+// func newInactiveIPMap() *inactiveIPMap {
+// 	return &inactiveIPMap{mu: sync.Mutex{}, mp: make(map[string][]string)}
+// }
+
+// func (im *inactiveIPMap) Get(svc string) []string {
+// 	im.mu.Lock()
+// 	defer im.mu.Unlock()
+// 	return im.mp[svc]
+// }
+
+// func (im *inactiveIPMap) Put(svc string, ips []string) {
+// 	im.mu.Lock()
+// 	defer im.mu.Unlock()
+// 	im.mp[svc] = ips
+// }
+
+type activeMap struct {
 	mu sync.Mutex
-	mp map[string][]string
+	mp map[string]bool
 }
 
-func newInactiveIPMap() *inactiveIPMap {
-	return &inactiveIPMap{mu: sync.Mutex{}, mp: make(map[string][]string)}
+func newActiveMap() *activeMap {
+	return &activeMap{mp: make(map[string]bool)}
 }
 
-func (im *inactiveIPMap) Get(svc string) []string {
-	im.mu.Lock()
-	defer im.mu.Unlock()
-	return im.mp[svc]
+func (am *activeMap) Init(ips []string) {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	for _, ip := range ips {
+		am.mp[ip] = true
+	}
 }
 
-func (im *inactiveIPMap) Put(svc string, ips []string) {
-	im.mu.Lock()
-	defer im.mu.Unlock()
-	im.mp[svc] = ips
+
+// Get returns the active status of the given IP.
+func (am *activeMap) Get(ip string) bool {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+	return am.mp[ip]
 }
+
+// Put sets the active status for the given IP.
+func (am *activeMap) Put(ip string, status bool) {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+	am.mp[ip] = status
+}
+
+
+// Delete removes the given IP from the map.
+func (am *activeMap) Delete(ip string) {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+	delete(am.mp, ip)
+}
+
+
+
 
 var (
 	Capacity_g          int64 // Ankit
 	RedirectUrl_g       string
 	Svc2BackendSrvMap_g = newBackendSrvMap() // holds all backends for services
 	Endpoints_g         = newEndpointsMap()  // all endpoints for all services
-	InactiveIPMap_g     = newInactiveIPMap() // holds inactive IPs for services
+	//InactiveIPMap_g     = newInactiveIPMap() // holds inactive IPs for services
+	ActiveMap_g         = newActiveMap()
 	SvcList_g           = make([]string, 0)  // knows all service names
 	NumRetries_g        int                  // how many times should a request be retried
 	ResetInterval_g     time.Duration
@@ -196,10 +246,10 @@ func GetSvc2BackendSrvMapLength() int {
 // AddToInactive moves the IP from the global list to the inactive list for the given service
 func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
-	inactiveIPs := InactiveIPMap_g.Get(svc)
+	//inactiveIPs := InactiveIPMap_g.Get(svc)
 
 	for i, backend := range backendSrvMap {
-        log.Println(backend.Ip," ",ip) 
+		//log.Println(backend.Ip," ",ip)
 		if backend.Ip == ip {
 			// Remove from active
 
@@ -208,9 +258,9 @@ func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 			Svc2BackendSrvMap_g.mu.Unlock()
 
 			// Add to inactive with reason
-			InactiveIPMap_g.mu.Lock()
-			InactiveIPMap_g.mp[svc] = append(inactiveIPs, ip)
-			InactiveIPMap_g.mu.Unlock()
+			// InactiveIPMap_g.mu.Lock()
+			// InactiveIPMap_g.mp[svc] = append(inactiveIPs, ip)
+			// InactiveIPMap_g.mu.Unlock()
 
 			if reason == "load" {
 				// Start timer for IP to be moved back to active list
@@ -233,14 +283,15 @@ func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 // RemoveFromInactive moves the IP from the inactive list to the global list for the given service
 func RemoveFromInactive(svc, ip string) {
 	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
-	inactiveIPs := InactiveIPMap_g.Get(svc)
+	log.Println("Length of backedn list: ",len(backendSrvMap))
+	//inactiveIPs := InactiveIPMap_g.Get(svc)
 
-	for i, inactiveIP := range inactiveIPs {
-		if inactiveIP == ip {
+	//for i, inactiveIP := range inactiveIPs {
+		//if inactiveIP == ip {
 			// Remove from inactive
-			InactiveIPMap_g.mu.Lock()
-			InactiveIPMap_g.mp[svc] = append(inactiveIPs[:i], inactiveIPs[i+1:]...)
-			InactiveIPMap_g.mu.Unlock()
+			// InactiveIPMap_g.mu.Lock()
+			// InactiveIPMap_g.mp[svc] = append(inactiveIPs[:i], inactiveIPs[i+1:]...)
+			// InactiveIPMap_g.mu.Unlock()
 
 			// Add to active
 			Svc2BackendSrvMap_g.mu.Lock()
@@ -248,19 +299,21 @@ func RemoveFromInactive(svc, ip string) {
 			Svc2BackendSrvMap_g.mu.Unlock()
 
 			log.Println("removed from inactive: ", ip)
+			ActiveMap_g.Put(ip,true)
 			return
-		}
-	}
+		//}
+	//}
 }
 
 // probeRTT probes the RTT for a given IP at specified intervals
 func probeRTT(ip string, interval time.Duration, svc string) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+	log.Println("Inside ProbeRTT")
 
 	for range ticker.C {
 		rtt, err := measureRTT(ip)
-		log.Printf("Inside probeRTT: %.2f ms",rtt)
+		//log.Printf("Inside probeRTT: %.2f ms",rtt)
 		if err != nil {
 			log.Println("Error fetching RTT:", err)
 			continue
@@ -271,6 +324,7 @@ func probeRTT(ip string, interval time.Duration, svc string) {
 			RemoveFromInactive(svc, ip)
 			return
 		}
+		//log.Printf("RTT for inactive backend %s is now above threshold: %.2f ms", ip, rtt)
 	}
 }
 
@@ -300,31 +354,66 @@ func probeRTT(ip string, interval time.Duration, svc string) {
 }*/
 
 // measureRTT measures the RTT to the given IP address using ICMP
+// func measureRTT(ip string) (float64, error) {
+// 	log.Println("Inside measureRTT")
+// 	conn, err := net.Dial("tcp", ip+":8080")
+// 	if err != nil {
+// 		log.Println("1 ", err)
+// 		return 0, err
+// 	}
+// 	defer conn.Close()
+
+// 	start := time.Now()
+// 	log.Println("start time: ",start)
+// 	_, err = conn.Write([]byte("ping"))
+// 	if err != nil {
+// 		log.Println("2 ", err)
+// 		return 0, err
+// 	}
+
+// 	buf := make([]byte, 1024)
+// 	_, err = conn.Read(buf)
+// 	if err != nil {
+// 		return 0, err
+// 	}
+// 	log.Println("completed")
+
+// 	elapsed := time.Since(start).Seconds() * 1000 // convert to milliseconds
+// 	log.Println("Inside measureRTT",elapsed)
+// 	return elapsed, nil
+// }
+
 func measureRTT(ip string) (float64, error) {
-	log.Println("Inside measureRTT")
-	conn, err := net.Dial("tcp", ip+":8080")
-	if err != nil {
-		log.Println("1 ", err)
-		return 0, err
-	}
-	defer conn.Close()
+	//log.Println("Inside measureRTT")
 
-	start := time.Now()
-	log.Println("start time: ",start)
-	_, err = conn.Write([]byte("ping"))
+	// Define the command to run hping3 with -c 1 for one packet and -S for SYN packets
+	cmd := exec.Command("sudo", "hping3", "-S", "-c", "1", "-p", "8080", ip)
+
+	// Run the command and capture output
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Println("2 ", err)
+		log.Println("Error executing hping3 command:", err)
 		return 0, err
 	}
 
-	buf := make([]byte, 1024)
-	_, err = conn.Read(buf)
+	// Convert output to string and log it
+	outputStr := string(output)
+	//log.Println("hping3 Output: ", outputStr)
+
+	// Use a regular expression to extract RTT value from the output
+	re := regexp.MustCompile(`rtt=([\d\.]+) ms`)
+	matches := re.FindStringSubmatch(outputStr)
+	if len(matches) < 2 {
+		return 0, fmt.Errorf("failed to parse RTT from hping3 output")
+	}
+
+	// Convert RTT value to float64
+	rtt, err := strconv.ParseFloat(matches[1], 64)
 	if err != nil {
+		log.Println("Error parsing RTT:", err)
 		return 0, err
 	}
-	log.Println("completed")
 
-	elapsed := time.Since(start).Seconds() * 1000 // convert to milliseconds
-	log.Println("Inside measureRTT",elapsed)
-	return elapsed, nil
+	//log.Println("RTT: ", rtt)
+	return rtt, nil
 }

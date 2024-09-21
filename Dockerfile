@@ -65,7 +65,8 @@ WORKDIR /app
 COPY . .
 
 # Install git and iproute2
-RUN apk add --no-cache git iproute2
+RUN apk add hping3 --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing
+RUN apk add --no-cache git iproute2 sudo
 
 # Build the Go application
 RUN CGO_ENABLED=0 GOOS=linux go build -buildvcs=false -a -installsuffix cgo -ldflags '-extldflags "-static"' -o blocproxy ./cmd
@@ -83,7 +84,15 @@ COPY --from=builder /app/blocproxy /app/blocproxy
 COPY --from=builder /app /app
 
 # Install iproute2 in the final stage to get ss command
-RUN apk add --no-cache iproute2 iputils
+RUN apk add hping3 --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing
+RUN apk add --no-cache iproute2 iputils sudo
+
+RUN adduser -D -u 2102 microuser && \
+    echo "microuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Use the created user
+USER microuser
+
 
 # Expose the necessary port
 EXPOSE 62081

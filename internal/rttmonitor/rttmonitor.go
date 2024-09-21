@@ -2,6 +2,7 @@ package rttmonitor
 
 import (
 	"bytes"
+	//"flag"
 	"fmt"
 	"log"
 	"os"
@@ -55,13 +56,18 @@ func monitorRTT(ip string, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
+
+
 	for {
 		select {
 		case <-stopCh:
 			// log.Println("RTT monitoring stopped for IP:", ip)
 			return
 		case <-ticker.C:
+
+			start := time.Now()
 			rtts, err := getRTTs(ip)
+			elapsed := time.Since(start).Milliseconds()
 			if err != nil {
 				// log.Println("Error fetching RTT:", err)
 				continue
@@ -74,6 +80,11 @@ func monitorRTT(ip string, interval time.Duration) {
 					continue
 				}
 				//log.Printf("Inside rttmonitor, %s : %.2f ms", ip, latestRTT)
+				if latestRTT > globals.RTTThreshold_g {
+					log.Printf("Inside rttmonitor, %s : %.2f ms  , time elpased: %d ms", ip, latestRTT, elapsed)
+					globals.ActiveMap_g.Put(ip, false)
+					globals.AddToInactive("yolov5", ip, 0, "rtt")
+				}
 				updateLatestRTT(ip, latestRTT)
 			}
 		}

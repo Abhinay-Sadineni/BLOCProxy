@@ -83,7 +83,7 @@ func main() {
 	}
 
 	// Start RTT monitoring with a 2-millisecond interval
-	go rttmonitor.StartRTTMonitoring(2 * time.Millisecond)
+	go rttmonitor.StartRTTMonitoring(20 * time.Millisecond)
 	log.Println("Started RTT monitoring")
 
 	// incoming request handling

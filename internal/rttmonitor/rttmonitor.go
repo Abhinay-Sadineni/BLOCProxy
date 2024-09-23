@@ -25,26 +25,24 @@ var (
 )
 
 func getRTTs(destinationIP string) ([]string, error) {
-	cmd := exec.Command("ss", "-ti")
+	// Use dst flag to directly filter for the destination IP
+	cmd := exec.Command("ss", "-ti", "dst", destinationIP)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute ss command: %w", err)
 	}
+
 	lines := strings.Split(out.String(), "\n")
 	rttPattern := regexp.MustCompile(`rtt:([0-9.]+)`)
 	var rtts []string
 
-	for i := 0; i < len(lines)-1; i++ {
-		if strings.Contains(lines[i], destinationIP) {
-			if i+1 < len(lines) {
-				match := rttPattern.FindStringSubmatch(lines[i+1])
-				if len(match) > 1 {
-					rtts = append(rtts, match[1])
-					//log.Printf("Parsed RTT for IP %s: %s ms", destinationIP, match[1])
-				}
-			}
+	for _, line := range lines {
+		match := rttPattern.FindStringSubmatch(line)
+		if len(match) > 1 {
+			rtts = append(rtts, match[1])
+			//log.Printf("Parsed RTT for IP %s: %s ms", destinationIP, match[1])
 		}
 	}
 
@@ -55,8 +53,6 @@ func monitorRTT(ip string, interval time.Duration) {
 	defer wg.Done()
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-
-
 
 	for {
 		select {
@@ -80,7 +76,7 @@ func monitorRTT(ip string, interval time.Duration) {
 					continue
 				}
 				//log.Printf("Inside rttmonitor, %s : %.2f ms", ip, latestRTT)
-				if latestRTT > globals.RTTThreshold_g {
+				if globals.ActiveMap_g.Get(ip) && latestRTT > globals.RTTThreshold_g {
 					log.Printf("Inside rttmonitor, %s : %.2f ms  , time elpased: %d ms", ip, latestRTT, elapsed)
 					globals.ActiveMap_g.Put(ip, false)
 					globals.AddToInactive("yolov5", ip, 0, "rtt")
@@ -121,6 +117,7 @@ func StartRTTMonitoring(interval time.Duration) {
 		// log.Println("Starting RTT monitoring for IP:", ip)
 		wg.Add(1)
 		go monitorRTT(ip, interval)
+		time.Sleep(4 * time.Millisecond)
 	}
 }
 

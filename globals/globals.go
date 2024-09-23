@@ -384,10 +384,8 @@ func probeRTT(ip string, interval time.Duration, svc string) {
 // }
 
 func measureRTT(ip string) (float64, error) {
-	//log.Println("Inside measureRTT")
-
-	// Define the command to run hping3 with -c 1 for one packet and -S for SYN packets
-	cmd := exec.Command("sudo", "hping3", "-S", "-c", "1", "-p", "8080", ip)
+	// Define the command to run hping3 with -c 5 for multiple packets
+	cmd := exec.Command("sudo", "hping3", "-S", "-c", "5", "-p", "8080", ip)
 
 	// Run the command and capture output
 	output, err := cmd.CombinedOutput()
@@ -396,24 +394,22 @@ func measureRTT(ip string) (float64, error) {
 		return 0, err
 	}
 
-	// Convert output to string and log it
+	// Convert output to string
 	outputStr := string(output)
-	//log.Println("hping3 Output: ", outputStr)
 
-	// Use a regular expression to extract RTT value from the output
-	re := regexp.MustCompile(`rtt=([\d\.]+) ms`)
+	// Regular expression to extract the average RTT from the statistics line
+	re := regexp.MustCompile(`round-trip min/avg/max = [\d.]+/([\d.]+)/[\d.]+ ms`)
 	matches := re.FindStringSubmatch(outputStr)
 	if len(matches) < 2 {
-		return 0, fmt.Errorf("failed to parse RTT from hping3 output")
+		return 0, fmt.Errorf("failed to parse average RTT from hping3 output")
 	}
 
-	// Convert RTT value to float64
-	rtt, err := strconv.ParseFloat(matches[1], 64)
+	// Convert average RTT value to float64
+	avgRTT, err := strconv.ParseFloat(matches[1], 64)
 	if err != nil {
-		log.Println("Error parsing RTT:", err)
+		log.Println("Error parsing average RTT:", err)
 		return 0, err
 	}
 
-	//log.Println("RTT: ", rtt)
-	return rtt, nil
+	return avgRTT, nil
 }

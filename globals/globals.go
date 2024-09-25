@@ -122,16 +122,24 @@ func (bm *backendSrvMap) Put(svc string, backends []BackendSrv) {
 	defer bm.mu.Unlock()
 	bm.mp[svc] = backends
 }
+
 type activeMap struct {
 	mu sync.Mutex
 	mp map[string]bool
 }
 
-
 func newActiveMap() *activeMap {
 	return &activeMap{mp: make(map[string]bool)}
 }
 
+func (am *activeMap) Init(ips []string) {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	for _, ip := range ips {
+		am.mp[ip] = true
+	}
+}
 
 // Get returns the active status of the given IP.
 func (am *activeMap) Get(ip string) bool {
@@ -153,7 +161,6 @@ func (am *activeMap) Delete(ip string) {
 	defer am.mu.Unlock()
 	delete(am.mp, ip)
 }
-
 
 var (
 	Capacity_g          int64 // Ankit
@@ -179,7 +186,8 @@ const (
 func InitEndpoints(svc string) {
 	// Example service name and hard-coded IPs
 
-	IPS:= Endpoints_g.Get(svc)
+	IPS := Endpoints_g.Get(svc)
+	ActiveMap_g.Init(IPS)
 
 	// Initialize BackendSrv instances for each IP and put them into Svc2BackendSrvMap_g
 	backends := make([]BackendSrv, len(IPS))
@@ -189,12 +197,13 @@ func InitEndpoints(svc string) {
 		}
 	}
 	Svc2BackendSrvMap_g.Put(svc, backends)
+	log.Println("Ips fetched: ", IPS)
 }
 
 func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
 	//inactiveIPs := InactiveIPMap_g.Get(svc)
-	ActiveMap_g.Put(ip,false)
+	ActiveMap_g.Put(ip, false)
 
 	for i, backend := range backendSrvMap {
 		//log.Println(backend.Ip," ",ip)

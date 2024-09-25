@@ -173,7 +173,7 @@ var (
 	NumRetries_g    int                 // how many times should a request be retried
 	ResetInterval_g time.Duration
 	RTTThreshold_g  = 10.0 // RTT threshold value
-	LoadThreshold_g = 10   // Load threshold for server count
+	LoadThreshold_g = 4   // Load threshold for server count
 )
 
 const (

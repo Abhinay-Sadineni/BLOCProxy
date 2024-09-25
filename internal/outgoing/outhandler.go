@@ -129,7 +129,8 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-	if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){ go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed))
+	if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){ 
+		go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed))
 		} else {
 		return 
 	}

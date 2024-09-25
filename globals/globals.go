@@ -122,6 +122,13 @@ func (bm *backendSrvMap) Put(svc string, backends []BackendSrv) {
 	defer bm.mu.Unlock()
 	bm.mp[svc] = backends
 }
+type activeMap struct {
+	mu sync.Mutex
+	mp map[string]bool
+}
+
+
+
 
 // Get returns the active status of the given IP.
 func (am *activeMap) Get(ip string) bool {
@@ -162,6 +169,7 @@ var (
 func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
 	//inactiveIPs := InactiveIPMap_g.Get(svc)
+	ActiveMap_g.Put(ip,false)
 
 	for i, backend := range backendSrvMap {
 		//log.Println(backend.Ip," ",ip)

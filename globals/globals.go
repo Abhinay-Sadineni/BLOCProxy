@@ -169,6 +169,28 @@ var (
 	LoadThreshold_g = 10   // Load threshold for server count
 )
 
+const (
+	CLIENTPORT  = ":8080"
+	PROXYINPORT = ":62081" // which port will the reverse proxy use for making outgoing request
+	PROXOUTPORT = ":62082" // which port the reverse proxy listens on
+	// RESET_INTERVAL = time.Second // interval after which credit info of backend expires
+)
+
+func InitEndpoints(svc string) {
+	// Example service name and hard-coded IPs
+
+	IPS:= Endpoints_g.Get(svc)
+
+	// Initialize BackendSrv instances for each IP and put them into Svc2BackendSrvMap_g
+	backends := make([]BackendSrv, len(IPS))
+	for i, ip := range IPS {
+		backends[i] = BackendSrv{
+			Ip: ip,
+		}
+	}
+	Svc2BackendSrvMap_g.Put(svc, backends)
+}
+
 func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
 	//inactiveIPs := InactiveIPMap_g.Get(svc)
@@ -226,7 +248,6 @@ func RemoveFromInactive(svc, ip string) {
 
 	log.Println("removed from inactive: ", ip)
 	ActiveMap_g.Put(ip, true)
-	return
 	//}
 	//}
 }

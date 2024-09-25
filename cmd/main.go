@@ -8,11 +8,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Ank0708/MiCoProxy/controllercomm"
+	//"github.com/Ank0708/MiCoProxy/controllercomm"
+	"strings"
+
 	"github.com/Ank0708/MiCoProxy/globals"
 	"github.com/Ank0708/MiCoProxy/internal/incoming"
 	"github.com/Ank0708/MiCoProxy/internal/loadbalancer"
 	"github.com/Ank0708/MiCoProxy/internal/outgoing"
+
 	//"github.com/Ank0708/MiCoProxy/internal/rttmonitor"
 	"github.com/gorilla/mux"
 )
@@ -45,8 +48,30 @@ func main() {
 	// Initialize endpoints
 	//globals.InitEndpoints()
 	//svc := os.Getenv("SVC")
-	controllercomm.GetEndpoints("yolov5")
-	globals.InitEndpoints("yolov5")
+	svc := os.Getenv("SVC")
+	if svc != "" {
+		podIPsEnv := os.Getenv("POD_IPS")
+
+		// Check if POD_IPS is not empty
+		if podIPsEnv == "" {
+			log.Println("POD_IPS environment variable is empty or not set")
+			return
+		}
+
+		// Split the pod IPs into a slice (assuming they are comma-separated)
+		podIPs := strings.Split(podIPsEnv, ",")
+
+		// Log the fetched IPs (for debugging)
+		log.Println("Fetched POD_IPS: ", podIPs)
+
+		// Populate the globals.Endpoints struct
+		var ep globals.Endpoints
+		ep.Ips = podIPs
+
+		// Store the result in the global Endpoints_g map
+		globals.Endpoints_g.Put(svc, ep.Ips)
+		globals.InitEndpoints(svc)
+	}
 
 	// Start RTT monitoring with a 2-millisecond interval
 	//go rttmonitor.StartRTTMonitoring(2 * time.Millisecond)

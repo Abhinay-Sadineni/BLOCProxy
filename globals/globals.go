@@ -128,6 +128,9 @@ type activeMap struct {
 }
 
 
+func newActiveMap() *activeMap {
+	return &activeMap{mp: make(map[string]bool)}
+}
 
 
 // Get returns the active status of the given IP.

@@ -60,7 +60,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		}
 		custom_port := "62081"
 		r.URL.Host = net.JoinHostPort(backend.Ip, custom_port) // use the ip directly
-		backend.Incr()                                         // a new request
+		backend.Incr()                                        // a new request
 
 		// Measure L7 Time
 		start := time.Now()
@@ -68,7 +68,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		// L7Time := time.Since(start)
 
 		// log.Println("L7 time is: ", L7Time)
-		backend.Decr() // close the request
+		if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){backend.Decr()} // close the request
 
 		if err != nil {
 			elapsed := time.Since(start) // how long the rejection took
@@ -110,7 +110,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	elapsed := time.Since(start).Nanoseconds()
 	//msg := fmt.Sprintf("client_count time: %d", elapsed)
 	//log.Println(msg) // debug
-	log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
+	if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)}
 
 	// Print the RTT value from latestRTT field of the backend server
 	// PrintRTTMap()
@@ -129,7 +129,10 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-	go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed)) // updating server values
+	if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){ go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed))
+		} else {
+		return 
+	}
 
 	// Check if the server should be moved to inactive list based on server_count
 	if int(serverCount) > globals.LoadThreshold_g {

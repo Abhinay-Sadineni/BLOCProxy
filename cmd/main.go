@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	globals.RedirectUrl_g = "http://localhost" + globals.CLIENTPORT
+	globals.RedirectUrl_g = "http://localhost:" + os.Getenv("CLIENTPORT")
 	fmt.Println("Input Port", globals.PROXYINPORT)
 	fmt.Println("Output Port", globals.PROXOUTPORT)
 	fmt.Println("redirecting to:", globals.RedirectUrl_g)

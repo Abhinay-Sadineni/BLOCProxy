@@ -45,10 +45,12 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	var backend *globals.BackendSrv
 
 	client := &http.Client{Timeout: time.Second * 20}
+	var ip string
 
 	for i := 0; i < globals.NumRetries_g; i++ {
 		// log.Println("Svc is: ", svc)
 		backend, err = loadbalancer.NextEndpoint(svc)
+		ip = backend.Ip
 		if err != nil {
 			log.Println("Error fetching backend:", err)
 			w.WriteHeader(http.StatusBadGateway)

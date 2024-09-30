@@ -21,6 +21,7 @@ type BackendSrv struct {
 	Credits      uint64
 	Server_count uint64 // Ankit
 	latestRTT    float64
+	Removing     bool  
 }
 
 // GetBackendSrvByIP returns the BackendSrv instance for the given IP
@@ -60,8 +61,15 @@ func (backend *BackendSrv) Decr() {
 }
 
 func (backend *BackendSrv) Update(start time.Time, credits uint64, utz uint64, elapsed uint64) {
+
+	// Attempt to lock
 	backend.RW.Lock()
+	if  backend.Removing {
+		return
+	}
 	defer backend.RW.Unlock()
+
+
 	backend.RcvTime = start
 	backend.LastRTT = elapsed
 	backend.WtAvgRTT = backend.WtAvgRTT*0.5 + 0.5*float64(elapsed)
@@ -209,6 +217,11 @@ func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 		//log.Println(backend.Ip," ",ip)
 		if backend.Ip == ip {
 			// Remove from active
+
+			backend.RW.Lock()
+            backend.Removing = true
+            backend.RW.Unlock()
+			time.Sleep(1*time.Millisecond)
 
 			Svc2BackendSrvMap_g.mu.Lock()
 			Svc2BackendSrvMap_g.mp[svc] = append(backendSrvMap[:i], backendSrvMap[i+1:]...)

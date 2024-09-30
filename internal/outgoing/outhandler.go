@@ -50,6 +50,11 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < globals.NumRetries_g; i++ {
 		// log.Println("Svc is: ", svc)
 		backend, err = loadbalancer.NextEndpoint(svc)
+
+		//retry if server count is too much
+		if(backend.Server_count > uint64(globals.LoadThreshold_g) ) {
+                continue
+		}
 		ip = backend.Ip
 		if err != nil {
 			log.Println("Error fetching backend:", err)
@@ -60,7 +65,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		}
 		custom_port := "62081"
 		r.URL.Host = net.JoinHostPort(backend.Ip, custom_port) // use the ip directly
-		backend.Incr()                                        // a new request
+		backend.Incr()                                         // a new request
 
 		// Measure L7 Time
 		start := time.Now()
@@ -68,7 +73,9 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		// L7Time := time.Since(start)
 
 		// log.Println("L7 time is: ", L7Time)
-		if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){backend.Decr()} // close the request
+		if backend != nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip) {
+			backend.Decr()
+		} // close the request
 
 		if err != nil {
 			elapsed := time.Since(start) // how long the rejection took
@@ -110,7 +117,9 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	elapsed := time.Since(start).Nanoseconds()
 	//msg := fmt.Sprintf("client_count time: %d", elapsed)
 	//log.Println(msg) // debug
-	if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)}
+	if backend != nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip) {
+		log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
+	}
 
 	// Print the RTT value from latestRTT field of the backend server
 	// PrintRTTMap()
@@ -129,16 +138,16 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-	if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){ 
+	if backend != nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip) {
 		go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed))
-		} else {
-		return 
+	} else {
+		return
 	}
 
 	// Check if the server should be moved to inactive list based on server_count
 	if int(serverCount) > globals.LoadThreshold_g {
 		log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
-		globals.AddToInactive(svc, backend.Ip, uint64(serverCount), "load")
+		go globals.AddToInactive(svc, backend.Ip, uint64(serverCount), "load")
 	}
 
 	// Check if the server should be moved to inactive list based on RTT

@@ -22,7 +22,7 @@ func LeastConn(svc string) (*globals.BackendSrv, error) {
 	srv2 := &backends[rand.Intn(len(backends))]
 
 	// var ip string
-	if (srv1.Reqs + int64(srv1.Server_count)) < srv2.Reqs+int64(srv2.Server_count) {
+	if srv1.Reqs  < srv2.Reqs {
 		return srv1, nil
 	}
 	return srv2, nil

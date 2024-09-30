@@ -64,9 +64,9 @@ func (backend *BackendSrv) Update(start time.Time, credits uint64, utz uint64, e
 
 	// Attempt to lock
 	backend.RW.Lock()
-	if  backend.Removing {
-		return
-	}
+	// if  backend.Removing {
+	// 	return
+	// }
 	defer backend.RW.Unlock()
 
 

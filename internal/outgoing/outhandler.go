@@ -52,9 +52,9 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		backend, err = loadbalancer.NextEndpoint(svc)
 
 		//retry if server count is too much
-		if(backend.Server_count > uint64(globals.LoadThreshold_g) ) {
-                continue
-		}
+		// if(backend.Server_count > uint64(globals.LoadThreshold_g) ) {
+        //         continue
+		// }
 		ip = backend.Ip
 		if err != nil {
 			log.Println("Error fetching backend:", err)
@@ -145,10 +145,10 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the server should be moved to inactive list based on server_count
-	if int(serverCount) > globals.LoadThreshold_g {
-		log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
-		go globals.AddToInactive(svc, backend.Ip, uint64(serverCount), "load")
-	}
+	// if int(serverCount) > globals.LoadThreshold_g {
+	// 	log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
+	// 	go globals.AddToInactive(svc, backend.Ip, uint64(serverCount), "load")
+	// }
 
 	// Check if the server should be moved to inactive list based on RTT
 	//if rtt > globals.RTTThreshold_g {

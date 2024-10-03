@@ -34,7 +34,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	r.URL.Scheme = "http"
 	r.RequestURI = ""
 
-	svc, _ , err := net.SplitHostPort(r.Host)
+	svc, _, err := net.SplitHostPort(r.Host)
 	//log.Println("Port: ", port)
 	if err == nil {
 		//addService("yolov5")
@@ -67,9 +67,9 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		// L7Time := time.Since(start)
 
 		// log.Println("L7 time is: ", L7Time)
-		if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){
-			backend.Decr() 
-		}// close the request
+		if backend != nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip) {
+			backend.Decr()
+		} // close the request
 
 		if err != nil {
 			elapsed := time.Since(start) // how long the rejection took
@@ -131,14 +131,15 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-	if(backend!=nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip)){
-		go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed)) 
+	if backend != nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip) {
+		go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed))
 	}
 
 	// Check if the server should be moved to inactive list based on server_count
 	svc = "yolov5"
 	if int(serverCount) > globals.LoadThreshold_g {
 		log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
+		globals.ActiveMap_g.Put(backend.Ip, false)
 		globals.AddToInactive(svc, backend.Ip, uint64(serverCount), "load")
 	}
 

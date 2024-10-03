@@ -385,7 +385,7 @@ func probeRTT(ip string, interval time.Duration, svc string) {
 
 func measureRTT(ip string) (float64, error) {
 	// Define the command to run hping3 with -c 5 for multiple packets
-	cmd := exec.Command("sudo", "hping3", "-S", "-c", "5", "-p", "8080", ip)
+	cmd := exec.Command("sudo", "hping3", "-S", "-c", "1", "-p", "8080", ip)
 
 	// Run the command and capture output
 	output, err := cmd.CombinedOutput()

@@ -61,9 +61,9 @@ func monitorRTT(ip string, interval time.Duration) {
 			return
 		case <-ticker.C:
 
-			start := time.Now()
+			//start := time.Now()
 			rtts, err := getRTTs(ip)
-			elapsed := time.Since(start).Milliseconds()
+			//elapsed := time.Since(start).Milliseconds()
 			if err != nil {
 				// log.Println("Error fetching RTT:", err)
 				continue
@@ -77,7 +77,7 @@ func monitorRTT(ip string, interval time.Duration) {
 				}
 				//log.Printf("Inside rttmonitor, %s : %.2f ms", ip, latestRTT)
 				if globals.ActiveMap_g.Get(ip) && latestRTT > globals.RTTThreshold_g {
-					log.Printf("Inside rttmonitor, %s : %.2f ms  , time elpased: %d ms", ip, latestRTT, elapsed)
+					//log.Printf("Inside rttmonitor, %s : %.2f ms  , time elpased: %d ms", ip, latestRTT, elapsed)
 					globals.ActiveMap_g.Put(ip, false)
 					globals.AddToInactive("yolov5", ip, 0, "rtt")
 				}

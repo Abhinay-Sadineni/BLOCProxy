@@ -15,7 +15,7 @@ type BackendSrv struct {
 	RW           sync.RWMutex
 	Ip           string
 	Reqs         int64
-	RcvTime      time.Time
+	ResetTime    time.Time
 	LastRTT      uint64
 	WtAvgRTT     float64
 	Credits      uint64
@@ -42,7 +42,6 @@ func GetBackendSrvByIP(ip string) *BackendSrv {
 func (backend *BackendSrv) Backoff() {
 	backend.RW.Lock()
 	defer backend.RW.Unlock()
-	backend.RcvTime = time.Now() // now time since > globals.RESET_INTERVAL; refer to MLeastConn algo
 	backend.Credits = 0
 }
 
@@ -64,16 +63,22 @@ func (backend *BackendSrv) Update(start time.Time, credits uint64, utz uint64, e
 
 	// Attempt to lock
 	backend.RW.Lock()
-	// if  backend.Removing {
-	// 	return
-	// }
 	defer backend.RW.Unlock()
 
-	backend.RcvTime = start
+	diff := int64(utz) - int64(LoadThreshold_g)
+	if diff <= 0 {
+		// Set ResetTime to zero
+		backend.ResetTime = time.Time{} // This represents the zero value of time
+	} else {
+		// Set ResetTime to a future time based on `diff`
+		backend.ResetTime = time.Now().Add(time.Duration(diff*54) * time.Millisecond)
+		log.Println("Server has to wait for: ",backend.ResetTime)
+	}
+
 	backend.LastRTT = elapsed
 	backend.WtAvgRTT = backend.WtAvgRTT*0.5 + 0.5*float64(elapsed)
 	backend.Credits += credits
-	backend.Server_count = utz // Ankit
+	backend.Server_count = utz
 }
 
 func (backend *BackendSrv) Update_latestRTT(latestRTT float64) {
@@ -175,12 +180,12 @@ var (
 	Svc2BackendSrvMap_g = newBackendSrvMap() // holds all backends for services
 	Endpoints_g         = newEndpointsMap()  // all endpoints for all services
 	//InactiveIPMap_g     = newInactiveIPMap() // holds inactive IPs for services
-	ActiveMap_g     = newActiveMap()
+	// ActiveMap_g     = newActiveMap()
 	SvcList_g       = make([]string, 0) // knows all service names
 	NumRetries_g    int                 // how many times should a request be retried
 	ResetInterval_g time.Duration
 	RTTThreshold_g  = 10.0 // RTT threshold value
-	LoadThreshold_g = 6    // Load threshold for server count
+	LoadThreshold_g = 5    // Load threshold for server count
 )
 
 const (
@@ -194,7 +199,7 @@ func InitEndpoints(svc string) {
 	// Example service name and hard-coded IPs
 
 	IPS := Endpoints_g.Get(svc)
-	ActiveMap_g.Init(IPS)
+	//ActiveMap_g.Init(IPS)
 
 	// Initialize BackendSrv instances for each IP and put them into Svc2BackendSrvMap_g
 	backends := make([]BackendSrv, len(IPS))
@@ -210,7 +215,7 @@ func InitEndpoints(svc string) {
 func AddToInactive(svc, ip string, serverCount uint64, reason string) {
 	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
 	//inactiveIPs := InactiveIPMap_g.Get(svc)
-	ActiveMap_g.Put(ip, false)
+	//ActiveMap_g.Put(ip, false)
 
 	for i, backend := range backendSrvMap {
 		//log.Println(backend.Ip," ",ip)
@@ -268,7 +273,7 @@ func RemoveFromInactive(svc, ip string) {
 	Svc2BackendSrvMap_g.mu.Unlock()
 
 	log.Println("removed from inactive: ", ip)
-	ActiveMap_g.Put(ip, true)
+	//ActiveMap_g.Put(ip, true)
 	//}
 	//}
 }

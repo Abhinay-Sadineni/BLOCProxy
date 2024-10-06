@@ -33,8 +33,8 @@ func GetBackendSvcList(svc string) ([]globals.BackendSrv, error) {
 					WtAvgRTT: 0,
 					// credit for all backends is set to 1 at the start
 					// it's up to the backend to update it
-					Credits: 1,
-					RcvTime: time.Now(),
+					Credits:   1,
+					ResetTime: time.Now(),
 				})
 		}
 		// add backend to the backend maps
@@ -72,6 +72,8 @@ func NextEndpoint(svc string) (*globals.BackendSrv, error) {
 		return LeastConn(svc)
 	case "MLeastConn":
 		return MLeastConn(svc)
+	case "Netflix":
+		return Netflix(svc)
 	default:
 		return nil, errors.New("no endpoint found")
 	}

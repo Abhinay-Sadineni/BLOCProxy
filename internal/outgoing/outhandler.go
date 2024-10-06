@@ -45,7 +45,6 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	var backend *globals.BackendSrv
 
 	client := &http.Client{Timeout: time.Second * 20}
-	var ip string
 
 	for i := 0; i < globals.NumRetries_g; i++ {
 		// log.Println("Svc is: ", svc)
@@ -55,7 +54,6 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		// if(backend.Server_count > uint64(globals.LoadThreshold_g) ) {
         //         continue
 		// }
-		ip = backend.Ip
 		if err != nil {
 			log.Println("Error fetching backend:", err)
 			w.WriteHeader(http.StatusBadGateway)
@@ -73,9 +71,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		// L7Time := time.Since(start)
 
 		// log.Println("L7 time is: ", L7Time)
-		if backend != nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip) {
-			backend.Decr()
-		} // close the request
+		backend.Decr()
 
 		if err != nil {
 			elapsed := time.Since(start) // how long the rejection took
@@ -117,9 +113,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	elapsed := time.Since(start).Nanoseconds()
 	//msg := fmt.Sprintf("client_count time: %d", elapsed)
 	//log.Println(msg) // debug
-	if backend != nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip) {
-		log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
-	}
+	log.Println("Server_count received for server: ", backend.Ip, " from server are: ", serverCount)
 
 	// Print the RTT value from latestRTT field of the backend server
 	// PrintRTTMap()
@@ -138,11 +132,8 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-	if backend != nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip) {
-		go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed))
-	} else {
-		return
-	}
+	go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed))
+
 
 	// Check if the server should be moved to inactive list based on server_count
 	// if int(serverCount) > globals.LoadThreshold_g {

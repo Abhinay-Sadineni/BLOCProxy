@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
-
+	"github.com/go-ping/ping"
 )
 
 // BackendSrv stores information for internal decision making
@@ -26,6 +26,8 @@ type BackendSrv struct {
 	Credits      uint64
 	Server_count uint64 // Ankit
 	latestRTT    float64
+	index        int64
+	ResetTime    time.Time
 }
 
 // GetBackendSrvByIP returns the BackendSrv instance for the given IP
@@ -56,6 +58,22 @@ func (backend *BackendSrv) Incr() {
 	backend.Reqs++
 }
 
+func (backend *BackendSrv) GetRTT() float64{
+     backend.RW.Lock()
+	 defer backend.RW.Unlock()
+	 return backend.latestRTT
+}
+
+
+
+func (backend *BackendSrv) GetRESETTIME() time.Time{
+	backend.RW.Lock()
+	defer backend.RW.Unlock()
+	return backend.ResetTime
+}
+
+
+
 func (backend *BackendSrv) Decr() {
 	backend.RW.Lock()
 	defer backend.RW.Unlock()
@@ -67,11 +85,24 @@ func (backend *BackendSrv) Decr() {
 func (backend *BackendSrv) Update(start time.Time, credits uint64, utz uint64, elapsed uint64) {
 	backend.RW.Lock()
 	defer backend.RW.Unlock()
+	
 	backend.RcvTime = start
 	backend.LastRTT = elapsed
 	backend.WtAvgRTT = backend.WtAvgRTT*0.5 + 0.5*float64(elapsed)
 	backend.Credits += credits
 	backend.Server_count = utz // Ankit
+
+
+	var difference uint64
+	if utz > uint64(LoadThreshold_g) {
+		difference = utz - uint64(LoadThreshold_g)
+	} else {
+		difference = 0
+	}
+	
+	differenceDuration := time.Duration(difference) * time.Millisecond *100
+	
+	backend.ResetTime = time.Now().Add(differenceDuration)
 }
 
 func (backend *BackendSrv) Update_latestRTT(latestRTT float64) {
@@ -128,70 +159,28 @@ func (bm *backendSrvMap) Put(svc string, backends []BackendSrv) {
 	bm.mp[svc] = backends
 }
 
-// type inactiveIPMap struct {
-// 	mu sync.Mutex
-// 	mp map[string][]string
-// }
-
-// func newInactiveIPMap() *inactiveIPMap {
-// 	return &inactiveIPMap{mu: sync.Mutex{}, mp: make(map[string][]string)}
-// }
-
-// func (im *inactiveIPMap) Get(svc string) []string {
-// 	im.mu.Lock()
-// 	defer im.mu.Unlock()
-// 	return im.mp[svc]
-// }
-
-// func (im *inactiveIPMap) Put(svc string, ips []string) {
-// 	im.mu.Lock()
-// 	defer im.mu.Unlock()
-// 	im.mp[svc] = ips
-// }
-
-type activeMap struct {
+type IndexMap struct {
 	mu sync.Mutex
-	mp map[string]bool
+	mp map[string][]int64
 }
 
-func newActiveMap() *activeMap {
-	return &activeMap{mp: make(map[string]bool)}
+func newIndexMap() *IndexMap {
+	return &IndexMap{mp: make(map[string][]int64)}
 }
-
-func (am *activeMap) Init(ips []string) {
-	am.mu.Lock()
-	defer am.mu.Unlock()
-
-	for _, ip := range ips {
-		am.mp[ip] = true
-	}
-}
-
 
 // Get returns the active status of the given IP.
-func (am *activeMap) Get(ip string) bool {
+func (am *IndexMap) Get(svc string) []int64 {
 	am.mu.Lock()
 	defer am.mu.Unlock()
-	return am.mp[ip]
+	return am.mp[svc]
 }
 
 // Put sets the active status for the given IP.
-func (am *activeMap) Put(ip string, status bool) {
+func (am *IndexMap) Put(svc string, indices []int64) {
 	am.mu.Lock()
 	defer am.mu.Unlock()
-	am.mp[ip] = status
+	am.mp[svc] = indices
 }
-
-
-// Delete removes the given IP from the map.
-func (am *activeMap) Delete(ip string) {
-	am.mu.Lock()
-	defer am.mu.Unlock()
-	delete(am.mp, ip)
-}
-
-
-
 
 var (
 	Capacity_g          int64 // Ankit
@@ -199,12 +188,13 @@ var (
 	Svc2BackendSrvMap_g = newBackendSrvMap() // holds all backends for services
 	Endpoints_g         = newEndpointsMap()  // all endpoints for all services
 	//InactiveIPMap_g     = newInactiveIPMap() // holds inactive IPs for services
-	ActiveMap_g         = newActiveMap()
-	SvcList_g           = make([]string, 0)  // knows all service names
-	NumRetries_g        int                  // how many times should a request be retried
-	ResetInterval_g     time.Duration
-	RTTThreshold_g      = 10.0 // RTT threshold value
-	LoadThreshold_g     = 10   // Load threshold for server count
+	ActiveMap_g     = newIndexMap()
+	InactiveMap_g   = newIndexMap()
+	SvcList_g       = make([]string, 0) // knows all service names
+	NumRetries_g    int                 // how many times should a request be retried
+	ResetInterval_g time.Duration
+	RTTThreshold_g  = 10.0 // RTT threshold value
+	LoadThreshold_g = 10   // Load threshold for server count
 )
 
 const (
@@ -221,112 +211,177 @@ func InitEndpoints(svc string) {
 
 	// Initialize BackendSrv instances for each IP and put them into Svc2BackendSrvMap_g
 	backends := make([]BackendSrv, len(IPS))
+	indices := make([]int64, len(IPS))
 	for i, ip := range IPS {
 		backends[i] = BackendSrv{
-			Ip: ip,
+			Ip:    ip,
+			index: int64(i),
 		}
+		indices[i] = (int64(i))
 	}
 	Svc2BackendSrvMap_g.Put(svc, backends)
+	ActiveMap_g.Put(svc, indices)
 }
 
-func GetSvc2BackendSrvMapLength() int {
+func GetIptobackendMap(svc string) map[string]*BackendSrv {
 	Svc2BackendSrvMap_g.mu.Lock()
 	defer Svc2BackendSrvMap_g.mu.Unlock()
 
-	// Check for the "localhost" key and print its values and length
-	length := 0
-	if values, exists := Svc2BackendSrvMap_g.mp["localhost"]; exists {
-		// fmt.Printf("Values for 'localhost': %v\n", values)
-		length = len(values)
+	backendMap := make(map[string]*BackendSrv)
+	for _, backends := range Svc2BackendSrvMap_g.mp {
+		for i := range backends {
+			backendMap[backends[i].Ip] = &backends[i]
+		}
 	}
-
-	return length
+	return backendMap
 }
 
 // AddToInactive moves the IP from the global list to the inactive list for the given service
-func AddToInactive(svc, ip string, serverCount uint64, reason string) {
-	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
-	//inactiveIPs := InactiveIPMap_g.Get(svc)
+func AddToInactive(svc string, index int64) {
+	AIndexMap := ActiveMap_g.Get(svc)
+	IIndexMap := InactiveMap_g.Get(svc)
+	for i := range AIndexMap {
+		if AIndexMap[i] == index {
+			NewActive := append(AIndexMap[:i], AIndexMap[i+1:]...)
+			ActiveMap_g.Put(svc, NewActive)
 
-	for i, backend := range backendSrvMap {
-		//log.Println(backend.Ip," ",ip)
-		if backend.Ip == ip {
-			// Remove from active
-
-			Svc2BackendSrvMap_g.mu.Lock()
-			Svc2BackendSrvMap_g.mp[svc] = append(backendSrvMap[:i], backendSrvMap[i+1:]...)
-			Svc2BackendSrvMap_g.mu.Unlock()
-
-			// Add to inactive with reason
-			// InactiveIPMap_g.mu.Lock()
-			// InactiveIPMap_g.mp[svc] = append(inactiveIPs, ip)
-			// InactiveIPMap_g.mu.Unlock()
-
-			if reason == "load" {
-				// Start timer for IP to be moved back to active list
-				delay := time.Duration((serverCount-uint64(LoadThreshold_g))*50) * time.Millisecond
-				go func() {
-					time.Sleep(delay)
-					RemoveFromInactive(svc, ip)
-				}()
-			} else if reason == "rtt" {
-				// Start probing the RTT for the IP
-				log.Println("Start probing")
-				go probeRTT(ip, 10*time.Millisecond, svc)
-			}
-
+			ANewInactive := append(IIndexMap, index)
+			InactiveMap_g.Put(svc, ANewInactive)
 			return
 		}
 	}
 }
 
 // RemoveFromInactive moves the IP from the inactive list to the global list for the given service
-func RemoveFromInactive(svc, ip string) {
-	backendSrvMap := Svc2BackendSrvMap_g.Get(svc)
-	log.Println("Length of backedn list: ",len(backendSrvMap))
-	//inactiveIPs := InactiveIPMap_g.Get(svc)
+func RemoveFromInactive(svc string, index int64) {
+	IIndexMap := InactiveMap_g.Get(svc)
+	AIndexMap := ActiveMap_g.Get(svc)
 
-	//for i, inactiveIP := range inactiveIPs {
-		//if inactiveIP == ip {
-			// Remove from inactive
-			// InactiveIPMap_g.mu.Lock()
-			// InactiveIPMap_g.mp[svc] = append(inactiveIPs[:i], inactiveIPs[i+1:]...)
-			// InactiveIPMap_g.mu.Unlock()
+	for i := range IIndexMap {
+		if IIndexMap[i] == index {
+			NewInActive := append(IIndexMap[:i], IIndexMap[i+1:]...)
+			InactiveMap_g.Put(svc, NewInActive)
 
-			// Add to active
-			Svc2BackendSrvMap_g.mu.Lock()
-			Svc2BackendSrvMap_g.mp[svc] = append(backendSrvMap, BackendSrv{Ip: ip})
-			Svc2BackendSrvMap_g.mu.Unlock()
-
-			log.Println("removed from inactive: ", ip)
-			ActiveMap_g.Put(ip,true)
-			return
-		//}
-	//}
-}
-
-// probeRTT probes the RTT for a given IP at specified intervals
-func probeRTT(ip string, interval time.Duration, svc string) {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	log.Println("Inside ProbeRTT")
-
-	for range ticker.C {
-		rtt, err := measureRTT(ip)
-		//log.Printf("Inside probeRTT: %.2f ms",rtt)
-		if err != nil {
-			log.Println("Error fetching RTT:", err)
-			continue
-		}
-
-		if rtt < RTTThreshold_g {
-			log.Printf("RTT for inactive backend %s is now below threshold: %.2f ms", ip, rtt)
-			RemoveFromInactive(svc, ip)
+			Newactive := append(AIndexMap, index)
+			ActiveMap_g.Put(svc, Newactive)
 			return
 		}
-		//log.Printf("RTT for inactive backend %s is now above threshold: %.2f ms", ip, rtt)
 	}
 }
+
+func MonitoringAgent(svc string, backend *BackendSrv, exitChan chan bool) {
+    ticker := time.NewTicker(2 * time.Millisecond)
+    defer ticker.Stop() // Ensure the ticker is stopped when the function exits
+
+    for {
+        select {
+			
+		case <-exitChan:
+            if time.Now().Before(backend.GetRESETTIME()){
+                    AddToInactive(svc, backend.index)
+
+					RetractingAgent(svc , backend ,exitChan ,"load")
+			} 
+            return
+
+        case <-ticker.C:
+            // Check if the RTT exceeds the threshold
+            if backend.GetRTT() > RTTThreshold_g {
+                log.Printf("RTT for %s exceeded threshold. Moving to inactive.", svc)
+
+                // Move the backend to inactive
+                AddToInactive(svc, backend.index)
+
+                // Optionally call the retracting agent after moving to inactive
+                RetractingAgent(svc, backend, exitChan ,"rtt")
+
+            }
+        }
+    }
+}
+
+
+func RetractingAgent(svc string, backend *BackendSrv, exitChan chan bool, reason string) {
+    switch reason {
+              case "rtt":
+
+				pinger, err := ping.NewPinger(backend.Ip)		
+				pinger.Count = 1  // Only ping once per tick
+				pinger.Timeout = 1 * time.Second  				
+
+				if err != nil {
+					log.Printf("Failed to create pinger for backend %s: %v", backend.Ip, err)
+					 return
+					}
+
+				ticker := time.NewTicker(10 * time.Millisecond)
+				defer ticker.Stop() 
+
+				for{
+					select{
+
+						// IF RESPONSE IS RECEVIED 
+					    case <-exitChan:
+
+
+							err := pinger.Run() // Send ICMP ping
+                            if err != nil {
+                                     log.Printf("Ping failed for backend %s: %v", backend.Ip, err)
+                                      continue // Retry on failure
+                                    }
+
+                            stats := pinger.Statistics()
+                            currentRTT := stats.AvgRtt.Milliseconds()
+                            if float64(currentRTT) <= RTTThreshold_g{
+								log.Printf("Backend %s has recovered from RTT. Moving back to active list.", backend.Ip)
+								RemoveFromInactive(svc, backend.index)
+								backend.Update_latestRTT(float64(currentRTT))
+								return
+							}
+	
+                        // RESPONSE NOT RECEIVED 
+						case <-ticker.C:
+							if backend.GetRTT() <= RTTThreshold_g 	{
+								log.Printf("Backend %s has recovered from RTT. Moving back to active list.", backend.Ip)
+								RemoveFromInactive(svc, backend.index)
+								return
+							}
+                          
+					}
+				}
+			
+              case "load":        
+                 time.Sleep(time.Until(backend.GetRESETTIME()))
+                 log.Printf("Backend %s has recovered from load. Moving back to active list.", backend.Ip)
+                 RemoveFromInactive(svc, backend.index)
+				 return
+         
+    }
+}
+
+
+// probeRTT probes the RTT for a given IP at specified intervals
+// func probeRTT(ip string, interval time.Duration, svc string) {
+// 	ticker := time.NewTicker(interval)
+// 	defer ticker.Stop()
+// 	log.Println("Inside ProbeRTT")
+
+// 	for range ticker.C {
+// 		rtt, err := measureRTT(ip)
+// 		//log.Printf("Inside probeRTT: %.2f ms",rtt)
+// 		if err != nil {
+// 			log.Println("Error fetching RTT:", err)
+// 			continue
+// 		}
+
+// 		if rtt < RTTThreshold_g {
+// 			log.Printf("RTT for inactive backend %s is now below threshold: %.2f ms", ip, rtt)
+// 			RemoveFromInactive(svc, ip)
+// 			return
+// 		}
+// 		//log.Printf("RTT for inactive backend %s is now above threshold: %.2f ms", ip, rtt)
+// 	}
+// }
 
 // measureRTT measures the RTT to the given IP address
 /*func measureRTT(ip string) (float64, error) {

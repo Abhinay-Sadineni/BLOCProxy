@@ -2,16 +2,11 @@ package rttmonitor
 
 import (
 	"bytes"
-	//"flag"
 	"fmt"
 	"log"
-	"os"
-
-	// "log"
 	"os/exec"
 	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -19,89 +14,122 @@ import (
 )
 
 var (
-	rttMap = make(map[string]float64)
-	stopCh = make(chan struct{})
-	wg     sync.WaitGroup
+	rttMap   = make(map[string]float64)
+	backendMap = make((map[string]*globals.BackendSrv))
+	rttMutex = sync.RWMutex{} // Mutex to protect access to rttMap
+	stopCh   = make(chan struct{})
+	wg       sync.WaitGroup
 )
 
-func getRTTs(destinationIP string) ([]string, error) {
-	// Use dst flag to directly filter for the destination IP
-	cmd := exec.Command("ss", "-ti", "dst", destinationIP)
+
+
+
+// monitorRTTs runs a single loop to monitor RTTs at the specified interval
+func getRawSSOutput() (string, error) {
+	// Add dport filter to the ss command
+	cmd := exec.Command("ss", "-tin", "dport", "62081")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute ss command: %w", err)
+		return "", fmt.Errorf("failed to execute ss command: %w", err)
 	}
+	return out.String(), nil
+}
 
-	lines := strings.Split(out.String(), "\n")
-	rttPattern := regexp.MustCompile(`rtt:([0-9.]+)`)
-	var rtts []string
+// parseRTTs parses the RTTs for all active backend IPs from the ss command output
+func parseRTTs(ssOutput string) map[string]float64 {
+	// Regular expression to match lines containing both IP and RTT
+	rttPattern := regexp.MustCompile(`(\d+\.\d+\.\d+\.\d+).*?rtt:([0-9.]+)`)
+	
+	// Map to hold IPs and their RTTs
+	rttMap := make(map[string]float64)
 
-	for _, line := range lines {
-		match := rttPattern.FindStringSubmatch(line)
-		if len(match) > 1 {
-			rtts = append(rtts, match[1])
-			//log.Printf("Parsed RTT for IP %s: %s ms", destinationIP, match[1])
+	// Find all matches in the ss output
+	matches := rttPattern.FindAllStringSubmatch(ssOutput, -1)
+	for _, match := range matches {
+		if len(match) == 3 { // match[0] is the full match, match[1] is the IP, match[2] is the RTT
+			ip := match[1]
+			rtt, err := strconv.ParseFloat(match[2], 64)
+			if err == nil {
+				rttMap[ip] = rtt
+			}
 		}
 	}
 
-	return rtts, nil
+	return rttMap
 }
 
-func monitorRTT(ip string, interval time.Duration) {
+// monitorRTTs runs a single loop to monitor RTTs at the specified interval
+func monitorRTTs(interval time.Duration) {
 	defer wg.Done()
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+	backendIPs := getActiveBackendIPs()
+	backendMap  = globals.GetIptobackendMap("yolov5")  
 
 	for {
 		select {
 		case <-stopCh:
-			// log.Println("RTT monitoring stopped for IP:", ip)
+			log.Println("RTT monitoring stopped")
 			return
-		case <-ticker.C:
+		default:
+			// Fetch ss output and handle errors
+			startTime := time.Now()
+			ssOutput, err := getRawSSOutput()
+			elapsedTime := time.Since(startTime)
 
-			//start := time.Now()
-			rtts, err := getRTTs(ip)
-			//elapsed := time.Since(start).Milliseconds()
 			if err != nil {
-				// log.Println("Error fetching RTT:", err)
+				log.Println("Error fetching ss output:", err)
 				continue
 			}
 
-			if len(rtts) > 0 {
-				latestRTT, err := strconv.ParseFloat(rtts[len(rtts)-1], 64)
-				if err != nil {
-					// log.Println("Error parsing RTT:", err)
-					continue
+			if len(backendIPs) == 0 {
+				log.Println("No active backend IPs found")
+				continue
+			}
+
+			// Parse RTTs from the output
+			rttMap := parseRTTs(ssOutput)
+
+			// Update the latest RTT for each active backend IP
+			for _, ip := range backendIPs {
+				if rtt, found := rttMap[ip]; found {
+					updateLatestRTT(ip, rtt)
 				}
-				//log.Printf("Inside rttmonitor, %s : %.2f ms", ip, latestRTT)
-				if globals.ActiveMap_g.Get(ip) && latestRTT > globals.RTTThreshold_g {
-					//log.Printf("Inside rttmonitor, %s : %.2f ms  , time elpased: %d ms", ip, latestRTT, elapsed)
-					globals.ActiveMap_g.Put(ip, false)
-					globals.AddToInactive("yolov5", ip, 0, "rtt")
-				}
-				updateLatestRTT(ip, latestRTT)
+			}
+
+			log.Println("RTT monitor elapsed time:", elapsedTime)
+			
+			// Sleep for the remaining interval time
+			sleepDuration := interval - elapsedTime
+			if sleepDuration > 0 {
+				time.Sleep(sleepDuration)
 			}
 		}
 	}
 }
 
+
+
+// updateLatestRTT updates the RTT for a given IP in the map and backend service
 func updateLatestRTT(ip string, rtt float64) {
-	backend := globals.GetBackendSrvByIP(ip)
+	backend := backendMap[ip]
 	if backend != nil {
 		backend.Update_latestRTT(rtt)
-		rttMap[ip] = rtt
-		// log.Printf("Updated RTT map: %s : %.2f ms", ip, rtt)
+
+		// rttMutex.Lock()
+		// rttMap[ip] = rtt
+		// rttMutex.Unlock()
+
+		//log.Printf("Updated RTT map: %s : %.2f ms", ip, rtt)
+	} else {
+		//log.Println("Backend not found for IP:", ip)
 	}
-	// else {
-	// 	log.Println("Backend not found for IP:", ip)
-	// }
 }
 
+// getActiveBackendIPs retrieves the list of active backend IPs
 func getActiveBackendIPs() []string {
 	activeIPs := make([]string, 0)
-	ips := globals.Endpoints_g.Get(os.Getenv("SVC"))
+	ips := globals.Endpoints_g.Get("yolov5")
 	log.Println("Inside ips: ", ips)
 	for _, ip := range ips {
 		if backend := globals.GetBackendSrvByIP(ip); backend != nil {
@@ -111,32 +139,21 @@ func getActiveBackendIPs() []string {
 	return activeIPs
 }
 
+// StartRTTMonitoring initializes the monitoring goroutine
 func StartRTTMonitoring(interval time.Duration) {
-	backendIPs := getActiveBackendIPs()
-	for _, ip := range backendIPs {
-		// log.Println("Starting RTT monitoring for IP:", ip)
-		wg.Add(1)
-		go monitorRTT(ip, interval)
-		time.Sleep(4 * time.Millisecond)
-	}
+	wg.Add(1)
+	go monitorRTTs(interval)
 }
 
+// StopRTTMonitoring signals the monitoring goroutine to stop and waits for it to finish
 func StopRTTMonitoring() {
 	close(stopCh)
 	wg.Wait()
 }
 
+// GetRTT retrieves the latest RTT for a given IP
 func GetRTT(ip string) float64 {
-	// log.Println("Inside RTT Monitoring")
+	rttMutex.RLock()
+	defer rttMutex.RUnlock()
 	return rttMap[ip]
-}
-
-// GetAllRTTs returns a copy of the rttMap
-func GetAllRTTs() map[string]float64 {
-	// Create a copy of rttMap to avoid race conditions
-	copyMap := make(map[string]float64)
-	for ip, rtt := range rttMap {
-		copyMap[ip] = rtt
-	}
-	return copyMap
 }

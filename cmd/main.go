@@ -69,11 +69,10 @@ func main() {
 		// Store the result in the global Endpoints_g map
 		globals.Endpoints_g.Put(svc, ep.Ips)
 		globals.InitEndpoints(svc)
-		globals.ActiveMap_g.Init(podIPs)
 	}
 
 	// Start RTT monitoring with a 2-millisecond interval
-	go rttmonitor.StartRTTMonitoring(30 * time.Millisecond)
+	go rttmonitor.StartRTTMonitoring(20 * time.Millisecond)
 	log.Println("Started RTT monitoring")
 
 	// incoming request handling

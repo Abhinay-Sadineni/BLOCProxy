@@ -35,6 +35,8 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	r.RequestURI = ""
 
 	svc, _, err := net.SplitHostPort(r.Host)
+	svc = "yolov5"
+
 	//log.Println("Port: ", port)
 	if err == nil {
 		//addService("yolov5")
@@ -42,9 +44,9 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 	var start time.Time
 	var resp *http.Response
 	var backend *globals.BackendSrv
-	var ip string
 
 	client := &http.Client{Timeout: time.Second * 20}
+	exitChan := make(chan bool)
 
 	for i := 0; i < globals.NumRetries_g; i++ {
 		// log.Println("Svc is: ", svc)
@@ -57,8 +59,8 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		custom_port := "62081"
-		ip = backend.Ip
 		r.URL.Host = net.JoinHostPort(backend.Ip, custom_port) // use the ip directly
+		go globals.MonitoringAgent(svc,backend,exitChan)
 		backend.Incr()                                         // a new request
 
 		// Measure L7 Time
@@ -67,9 +69,7 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 		// L7Time := time.Since(start)
 
 		// log.Println("L7 time is: ", L7Time)
-		if backend != nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip) {
 			backend.Decr()
-		} // close the request
 
 		if err != nil {
 			elapsed := time.Since(start) // how long the rejection took
@@ -131,22 +131,8 @@ func HandleOutgoing(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
-	if backend != nil && backend.Ip == ip && globals.ActiveMap_g.Get(ip) {
-		go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed))
-	}
+	go backend.Update(start, uint64(chip), uint64(serverCount), uint64(elapsed))
+	exitChan <- true
 
 	// Check if the server should be moved to inactive list based on server_count
-	svc = "yolov5"
-	if int(serverCount) > globals.LoadThreshold_g {
-		log.Printf("Moving backend %s to inactive list due to high server_count: %d", backend.Ip, serverCount)
-		globals.ActiveMap_g.Put(backend.Ip, false)
-		globals.AddToInactive(svc, backend.Ip, uint64(serverCount), "load")
-	}
-
-	// Check if the server should be moved to inactive list based on RTT
-	// if rtt > globals.RTTThreshold_g {
-	// 	log.SetFlags(log.Ltime | log.Lmicroseconds)
-	// 	log.Printf("Moving backend %s to inactive list due to high RTT: %.2f ms", backend.Ip, rtt)
-	// 	globals.AddToInactive(svc, backend.Ip, backend.Server_count, "rtt")
-	// }
 }

@@ -37,13 +37,37 @@ func GetBackendSvcList(svc string) ([]globals.BackendSrv, error) {
 					RcvTime: time.Now(),
 				})
 		}
-		// add backend to the backend maps
+		// add backend to the backend mapse
 		globals.Svc2BackendSrvMap_g.Put(svc, backendSrvs)
 		return globals.Svc2BackendSrvMap_g.Get(svc), nil
 	}
 	// else
 	return nil, errors.New("no backends found")
 }
+
+func GetActiveSvcList(svc string)([]int64 ,error) {
+    mapExists := globals.ActiveMap_g.Get(svc)
+	if len(mapExists) > 0 {
+		return mapExists, nil
+	}
+
+	var IndexSrvs []int64
+	ips := globals.Endpoints_g.Get(svc)
+	if len(ips) > 0 {
+		for i := range ips {
+		IndexSrvs = append(IndexSrvs,int64(i))
+		// add backend to the backend mapse
+		globals.ActiveMap_g.Put(svc, IndexSrvs)
+	}
+	return globals.ActiveMap_g.Get(svc), nil
+
+}
+	// else
+	return nil, errors.New("no backends found")
+
+
+}
+
 
 func Random(svc string) (*globals.BackendSrv, error) {
 	log.Println("Random used") // debug

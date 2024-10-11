@@ -11,6 +11,7 @@ import (
 func LeastConn(svc string) (*globals.BackendSrv, error) {
 	//log.Println("Least Connection used") // debug
 	backends, err := GetBackendSvcList(svc)
+	ActiveIndexs , err := GetActiveSvcList(svc)
 	if err != nil {
 		return nil, err
 	}
@@ -18,8 +19,8 @@ func LeastConn(svc string) (*globals.BackendSrv, error) {
 	// P2C Least Conn
 	seed := time.Now().UTC().UnixNano()
 	rand.Seed(seed)
-	srv1 := &backends[rand.Intn(len(backends))]
-	srv2 := &backends[rand.Intn(len(backends))]
+	srv1 := &backends[ActiveIndexs[rand.Intn(len(ActiveIndexs))]]
+	srv2 := &backends[ActiveIndexs[rand.Intn(len(ActiveIndexs))]]
 
 	// var ip string
 	if srv1.Reqs < srv2.Reqs {
